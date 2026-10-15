@@ -3,7 +3,7 @@ import { addItem, removeItem, removeItems, setAllChecked, updateItem } from "../
 import { cartTotal, checkedCount, lineTotal, plannedTotal } from "../domain/totals";
 import type { Item } from "../domain/types";
 import type { GroceryStorage } from "../storage/storage";
-import { budgetMessage, peso } from "./format";
+import { budgetMessage, currencyFormatter, type CurrencyCode } from "./format";
 import { appTemplate } from "./template";
 
 export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
@@ -33,10 +33,16 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   const budgetForm = $<HTMLFormElement>("#budget-form");
   const budgetInput = $<HTMLInputElement>("#budget-input");
   const budgetStatusEl = $("#budget-status");
+  const currencySelect = $<HTMLSelectElement>("#currency-select");
+  const budgetCurrencyEl = $("#budget-currency");
 
   // ---- state ----
   let items: Item[] = storage.loadItems();
   let dailyBudget: number | null = storage.loadDailyBudget();
+  const savedCurrency = localStorage.getItem("grocery-currency-v1");
+  let currency: CurrencyCode = savedCurrency === "VND" || savedCurrency === "USD" ? savedCurrency : "PHP";
+  let money = currencyFormatter(currency);
+  currencySelect.value = currency;
   let selectionMode = false;
   let selectedIds = new Set<string>();
 
@@ -46,14 +52,14 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   function updateTotals(): void {
     const inCart = cartTotal(items);
     const status = budgetStatus(inCart, dailyBudget);
-    plannedTotalEl.textContent = peso.format(plannedTotal(items));
-    cartTotalEl.textContent = peso.format(inCart);
+    plannedTotalEl.textContent = money.format(plannedTotal(items));
+    cartTotalEl.textContent = money.format(inCart);
     cartCardEl.classList.toggle("over-budget", status.state === "over");
     cartCardEl.setAttribute(
       "aria-label",
-      `In your cart ${peso.format(inCart)}${status.state === "over" ? ", over today's budget" : ""}`,
+      `In your cart ${money.format(inCart)}${status.state === "over" ? ", over today's budget" : ""}`,
     );
-    budgetStatusEl.textContent = budgetMessage(status);
+    budgetStatusEl.textContent = budgetMessage(status, money);
   }
 
   function updateProgress(): void {
@@ -69,7 +75,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
 
   function updateBulkActions(): void {
     bulkActionsEl.hidden = !selectionMode;
-    toggleSelectBtn.textContent = selectionMode ? "Cancel" : "Select for delete";
+    toggleSelectBtn.textContent = selectionMode ? "Cancel" : "Select Items";
     const n = selectedIds.size;
     deleteSelectedBtn.textContent = n ? `Delete selected (${n})` : "Delete selected";
     deleteSelectedBtn.disabled = n === 0;
@@ -132,7 +138,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     const subtotal = document.createElement("span");
     subtotal.className = "item-subtotal";
     const updateSubtotal = (): void => {
-      subtotal.textContent = `Line total · ${peso.format(lineTotal(current()))}`;
+      subtotal.textContent = `Line total · ${money.format(lineTotal(current()))}`;
     };
     updateSubtotal();
 
@@ -153,7 +159,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
       updateSubtotal();
     });
     price.className = "price";
-    price.placeholder = "₱";
+    price.placeholder = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;
     price.title = "Price per unit";
     price.setAttribute("aria-label", `Price per unit for ${item.name}`);
 
@@ -179,8 +185,33 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   }
 
   // ---- events ----
+  currencySelect.addEventListener("change", () => {
+    const selected = currencySelect.value as CurrencyCode;
+    if (!["PHP", "VND", "USD"].includes(selected)) return;
+    currency = selected;
+    money = currencyFormatter(currency);
+    localStorage.setItem("grocery-currency-v1", currency);
+    budgetCurrencyEl.textContent = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;
+    render();
+  });
+
+  nameInput.addEventListener("input", () => {
+    if (nameInput.value.trim()) {
+      nameInput.classList.remove("invalid");
+      nameInput.removeAttribute("aria-invalid");
+    }
+  });
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
+    if (!nameInput.value.trim()) {
+      nameInput.classList.add("invalid");
+      nameInput.setAttribute("aria-invalid", "true");
+      nameInput.focus();
+      return;
+    }
+    nameInput.classList.remove("invalid");
+    nameInput.removeAttribute("aria-invalid");
     setItems(addItem(items, nameInput.value));
     nameInput.value = "";
     render();
@@ -234,5 +265,6 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     render();
   });
 
+  budgetCurrencyEl.textContent = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;
   render();
 }
