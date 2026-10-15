@@ -10,15 +10,15 @@ export const appTemplate = `
   </header>
   <main>
     <form id="budget-form" class="budget-form">
-      <label for="budget-input">Today’s budget</label>
+      <div class="budget-heading"><label for="budget-input">Today’s budget</label><label class="currency-choice" for="currency-select">Currency<select id="currency-select"><option value="PHP">Philippine peso (PHP)</option><option value="VND">Vietnamese đồng (VND)</option><option value="USD">US dollar (USD)</option></select></label></div>
       <div class="budget-controls">
-        <span aria-hidden="true">₱</span>
+        <span id="budget-currency" aria-hidden="true">₱</span>
         <input id="budget-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Set a spending limit" />
         <button type="submit">Save</button>
       </div>
       <p id="budget-status" aria-live="polite"></p>
     </form>
-    <form id="add-form">
+    <form id="add-form" novalidate>
       <label class="sr-only" for="new-name">New grocery item</label>
       <input id="new-name" placeholder="What do you need?" required autocomplete="off" />
       <button type="submit"><span aria-hidden="true">＋</span> Add item</button>
@@ -26,7 +26,7 @@ export const appTemplate = `
     <section class="list-section" aria-labelledby="list-heading">
       <div class="section-heading">
         <div><h2 id="list-heading">Your list</h2><p>Tap an item when it’s in your cart.</p></div>
-        <div class="heading-actions"><span id="item-count" class="item-count"></span><button id="toggle-select" class="text-button" type="button">Select for delete</button></div>
+        <div class="heading-actions"><span id="item-count" class="item-count"></span><button id="toggle-select" class="text-button" type="button">Select Items</button></div>
       </div>
       <div class="progress-track" role="progressbar" aria-label="Shopping progress" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
         <span id="progress-fill"></span>
