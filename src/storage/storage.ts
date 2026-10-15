@@ -1,0 +1,64 @@
+import type { Item } from "../domain/types";
+
+// The rest of the app only knows this interface, so swapping localStorage
+// for IndexedDB or Capacitor Preferences later only touches this file.
+export interface GroceryStorage {
+  loadItems(): Item[];
+  saveItems(items: Item[]): void;
+  loadDailyBudget(): number | null;
+  saveDailyBudget(amount: number | null): void;
+}
+
+// Same keys as before, so existing data on your phone keeps working.
+const KEY = "grocery-items-v1";
+const BUDGET_KEY = "grocery-daily-budget-v1";
+
+type KeyValueStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export function localDateKey(now: Date = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+export function createLocalStorageAdapter(
+  store: KeyValueStore = localStorage,
+  today: () => string = localDateKey,
+): GroceryStorage {
+  return {
+    loadItems() {
+      try {
+        const raw = store.getItem(KEY);
+        const parsed: unknown = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? (parsed as Item[]) : [];
+      } catch {
+        return [];
+      }
+    },
+    saveItems(items) {
+      try {
+        store.setItem(KEY, JSON.stringify(items));
+      } catch {
+        // storage full or blocked; keep the app usable for this session
+      }
+    },
+    loadDailyBudget() {
+      try {
+        const raw = store.getItem(BUDGET_KEY);
+        if (!raw) return null;
+        const saved = JSON.parse(raw) as { date?: string; amount?: number };
+        return saved.date === today() && typeof saved.amount === "number" ? saved.amount : null;
+      } catch {
+        return null;
+      }
+    },
+    saveDailyBudget(amount) {
+      try {
+        if (amount === null) store.removeItem(BUDGET_KEY);
+        else store.setItem(BUDGET_KEY, JSON.stringify({ date: today(), amount }));
+      } catch {
+        // ignore, same reason as above
+      }
+    },
+  };
+}
