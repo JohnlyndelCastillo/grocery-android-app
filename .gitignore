@@ -40,3 +40,7 @@ keystore.properties
 
 # Test output
 coverage/
+
+# Docs
+docs/*
+!docs/release-notes.md

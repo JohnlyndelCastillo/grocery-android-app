@@ -75,4 +75,55 @@ describe("grocery app", () => {
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
   });
+
+  it("increments and decrements quantity without going below zero", () => {
+    const { q, storage } = setup([eggs]);
+    const qty = q<HTMLInputElement>(".qty");
+
+    q<HTMLButtonElement>('[aria-label="Increase quantity of Eggs"]').click();
+    expect(qty.value).toBe("2");
+    expect(q(".item-subtotal").textContent).toContain("60.00");
+
+    q<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]').click();
+    q<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]').click();
+    expect(qty.value).toBe("0");
+    expect(q(".item-subtotal").textContent).toContain("0.00");
+    expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...eggs, qty: 0 }]);
+  });
+
+  it("keeps typed quantity edits and shows the item name in the title row", () => {
+    const longNameItem = { ...eggs, name: "A very long grocery item name" };
+    const { q, storage } = setup([longNameItem]);
+    const qty = q<HTMLInputElement>(".qty");
+    qty.value = "3";
+    qty.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(q(".item-title-row .name").textContent).toBe(longNameItem.name);
+    expect(q(".item-details-row .item-subtotal").textContent).toContain("90.00");
+    expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...longNameItem, qty: 3 }]);
+  });
+
+  it("reveals and confirms single-item deletion from the swipe action", () => {
+    const { q, storage } = setup([rice, eggs]);
+    const swipeDelete = q<HTMLButtonElement>('[aria-label="Delete Rice"]');
+    swipeDelete.click();
+
+    expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
+    expect(q("#delete-confirm-message").textContent).toContain("Rice");
+    q<HTMLButtonElement>("#confirm-delete").click();
+
+    expect(q("#list").textContent).not.toContain("Rice");
+    expect(q("#list").textContent).toContain("Eggs");
+    expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
+  });
+
+  it("deletes immediately when the per-item x button is clicked", () => {
+    const { q, storage } = setup([rice, eggs]);
+    q<HTMLButtonElement>('.del[aria-label="Delete Rice"]').click();
+
+    expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(false);
+    expect(q("#list").textContent).not.toContain("Rice");
+    expect(q("#list").textContent).toContain("Eggs");
+    expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
+  });
 });

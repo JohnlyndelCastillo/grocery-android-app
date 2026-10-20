@@ -7,8 +7,8 @@ android {
         applicationId "com.johnlyn.grocery"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -19,17 +19,19 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            // Private Drive distribution: keep the signing identity used by existing debug installs
+            // so users can install updates without uninstalling and losing local list data.
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
     applicationVariants.all { variant ->
-        if (variant.buildType.name == 'release') {
-            variant.outputs.all {
-                outputFileName = 'grocery-list-release-v3.apk'
-            }
+        variant.outputs.all {
+            outputFileName = "grocery-list-v${variant.versionName}-${variant.buildType.name}.apk"
         }
     }
+
 }
 
 repositories {
