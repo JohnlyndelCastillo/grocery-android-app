@@ -43,4 +43,7 @@ coverage/
 
 # Docs
 docs/*
+!docs/images/
+docs/images/*
+!docs/images/grocery-list.png
 !docs/release-notes.md
