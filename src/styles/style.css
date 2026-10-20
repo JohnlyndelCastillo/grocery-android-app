@@ -13,12 +13,12 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: #f5f7f1; }
-#app { width: min(100%, 620px); margin: 0 auto; padding: 0 18px 42px; }
+#app { width: min(100%, 620px); margin: 0 auto; padding: 0 18px calc(42px + env(safe-area-inset-bottom, 0px)); }
 .hero {
   position: relative;
   overflow: hidden;
   margin: 0 -18px;
-  padding: 34px 24px 24px;
+  padding: calc(34px + env(safe-area-inset-top, 0px)) 24px 24px;
   color: #fff;
   background: linear-gradient(145deg, #2b7950 0%, #1e5d3d 100%);
   border-radius: 0 0 28px 28px;
@@ -82,23 +82,35 @@ h2 { margin: 0; font-size: 1.12rem; letter-spacing: -.025em; }
 .bulk-actions button:disabled { cursor: default; opacity: .45; }
 ul { list-style: none; margin: 0; padding: 0; }
 #list { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-li { display: flex; align-items: center; gap: 9px; min-height: 64px; margin-bottom: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 7px #263d2d08; }
+li { position: relative; display: flex; align-items: center; min-height: 64px; margin-bottom: 8px; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 7px #263d2d08; }
+li .swipe-content { position: relative; z-index: 1; display: flex; align-items: stretch; width: 100%; min-height: 62px; padding: 10px; background: #fff; transition: transform .2s ease; }
+li.done .swipe-content { background: #f0f5ef; }
+li.is-swiped .swipe-content { transform: translateX(-76px); }
+.swipe-delete { position: absolute; inset: 0 0 0 auto; width: 84px; border-radius: 0; color: #fff; background: #ad5147; font-size: .82rem; font-weight: 700; }
+li.done { background: #f0f5ef; }
 li.done { background: #f0f5ef; }
 li input[type="checkbox"] { appearance: none; flex: 0 0 22px; width: 22px; height: 22px; margin: 0; border: 1.7px solid #b9c7ba; border-radius: 7px; background: #fff; cursor: pointer; }
 li input[type="checkbox"].select-item { border-color: #d39a59; }
 li input[type="checkbox"].select-item:checked { border-color: #b87a35; background: #b87a35; }
 li input[type="checkbox"]:checked { border-color: var(--green); background: var(--green); }
 li input[type="checkbox"]:checked::after { content: '✓'; display: block; color: white; font-size: 15px; line-height: 19px; text-align: center; font-weight: 700; }
-.item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.name { min-width: 0; overflow-wrap: anywhere; font-size: .91rem; font-weight: 600; }
-.item-subtotal { color: #7c897e; font-size: .7rem; font-variant-numeric: tabular-nums; }
+.item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.item-title-row { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+.item-title-row .name { flex: 1; min-width: 0; padding-top: 2px; overflow-wrap: anywhere; font-size: .91rem; font-weight: 600; }
+.item-details-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 31px; }
+.item-subtotal { flex: 1; min-width: 0; color: #7c897e; font-size: .7rem; font-variant-numeric: tabular-nums; }
 li.done .name { color: #89958b; text-decoration: line-through; }
 li.done .item-subtotal { color: #8e9a90; }
 .qty, .price { height: 38px !important; padding: 0 7px !important; border-radius: 9px !important; text-align: center; font-size: .83rem; }
-.qty { width: 47px; }
+.quantity-control { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 2px; border: 1px solid #dfe6dc; border-radius: 11px; background: #f7f9f5; }
+.quantity-control .qty { width: 30px; height: 34px !important; padding: 0 2px !important; border: 0 !important; border-radius: 7px !important; background: transparent; box-shadow: none !important; }
+.qty-step { width: 30px; height: 34px; padding: 0; border-radius: 8px; color: var(--green-dark); background: transparent; font-size: 1.1rem; font-weight: 600; touch-action: manipulation; transition: none; }
+.qty-step:hover, .qty-step:active, .qty-step:focus, .qty-step:focus-visible { opacity: 1; background: transparent; outline: none; box-shadow: none; }
 .price { width: 76px; }
+.item-details-row .del { margin-left: -5px; }
 .del { flex: 0 0 32px; width: 32px; height: 34px; padding: 0; color: #a0aaa1; background: transparent; font-size: 1.15rem; }
 .del:hover { color: #b34a42; background: #fff0ed; }
+@media (hover: hover) and (pointer: fine) { .swipe-delete { display: none; } }
 .empty-state { margin: 0; padding: 24px 16px; border: 1px dashed #cbd8c9; border-radius: 15px; color: #718073; text-align: center; font-size: .88rem; }
 .empty-state[hidden] { display: none; }
 .dialog-content { width: min(100%, 360px); padding: 23px; }
@@ -117,8 +129,11 @@ dialog p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
 @media (max-width: 380px) {
   #app { padding-right: 13px; padding-left: 13px; }
   .hero { margin-right: -13px; margin-left: -13px; padding-right: 18px; padding-left: 18px; }
-  li { gap: 7px; padding: 8px; }
-  .qty { width: 42px; }
+  li .swipe-content { padding: 8px; }
+  .item-title-row { gap: 7px; }
+  .item-details-row { gap: 5px; padding-left: 29px; }
+  .quantity-control .qty { width: 30px; }
+  .qty-step { width: 27px; }
   .price { width: 68px; }
   #add-form button { padding: 0 11px; }
 }

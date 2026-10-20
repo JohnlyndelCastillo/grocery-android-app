@@ -45,6 +45,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   currencySelect.value = currency;
   let selectionMode = false;
   let selectedIds = new Set<string>();
+  let pendingDeleteId: string | null = null;
 
   budgetInput.value = dailyBudget === null ? "" : String(dailyBudget);
 
@@ -107,6 +108,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     const current = (): Item => items.find((i) => i.id === item.id) ?? item;
 
     const li = document.createElement("li");
+    li.classList.add("swipe-row");
     if (item.checked) li.classList.add("done");
 
     const check = document.createElement("input");
@@ -144,15 +146,42 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
 
     const itemInfo = document.createElement("div");
     itemInfo.className = "item-info";
-    itemInfo.append(name, subtotal);
+    const titleRow = document.createElement("div");
+    titleRow.className = "item-title-row";
+    titleRow.append(check, select, name);
+    const detailsRow = document.createElement("div");
+    detailsRow.className = "item-details-row";
+    detailsRow.append(subtotal);
+    itemInfo.append(titleRow, detailsRow);
 
-    const qty = numberInput(item.qty, "1", (n) => {
+    const qty = numberInput(item.qty || 1, "1", (n) => {
       setItems(updateItem(items, item.id, { qty: n }));
       updateSubtotal();
     });
     qty.className = "qty";
     qty.title = "Quantity";
     qty.setAttribute("aria-label", `Quantity of ${item.name}`);
+
+    const quantity = document.createElement("div");
+    quantity.className = "quantity-control";
+    const adjustQty = (delta: number): void => {
+      const next = Math.max(0, (Number(qty.value) || 0) + delta);
+      qty.value = String(next);
+      qty.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const decrement = document.createElement("button");
+    decrement.type = "button";
+    decrement.className = "qty-step";
+    decrement.textContent = "−";
+    decrement.setAttribute("aria-label", `Decrease quantity of ${item.name}`);
+    decrement.addEventListener("click", () => adjustQty(-1));
+    const increment = document.createElement("button");
+    increment.type = "button";
+    increment.className = "qty-step";
+    increment.textContent = "+";
+    increment.setAttribute("aria-label", `Increase quantity of ${item.name}`);
+    increment.addEventListener("click", () => adjustQty(1));
+    quantity.append(decrement, qty, increment);
 
     const price = numberInput(item.price, "0.01", (n) => {
       setItems(updateItem(items, item.id, { price: n }));
@@ -172,8 +201,55 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
       render();
     });
 
-    li.append(check, select, itemInfo, qty, price, del);
+    let startX = 0;
+    let startY = 0;
+    let swiping = false;
+    li.addEventListener("touchstart", (event) => {
+      if (selectionMode || event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      swiping = false;
+    }, { passive: true });
+    li.addEventListener("touchmove", (event) => {
+      if (selectionMode || event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+      if (!swiping && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) swiping = true;
+      if (swiping) event.preventDefault();
+    }, { passive: false });
+    li.addEventListener("touchend", (event) => {
+      if (selectionMode || !swiping) return;
+      const dx = event.changedTouches[0].clientX - startX;
+      if (dx < -48) {
+        root.querySelectorAll(".swipe-row.is-swiped").forEach((row) => row.classList.remove("is-swiped"));
+        li.classList.add("is-swiped");
+      } else if (dx > 48) {
+        li.classList.remove("is-swiped");
+      }
+      swiping = false;
+    });
+    li.addEventListener("click", (event) => {
+      if ((event.target as HTMLElement).closest("button, input")) return;
+      if (li.classList.contains("is-swiped")) li.classList.remove("is-swiped");
+    });
+
+    const content = document.createElement("div");
+    content.className = "swipe-content";
+    detailsRow.append(quantity, price, del);
+    content.append(itemInfo);
+    const swipeDelete = document.createElement("button");
+    swipeDelete.className = "swipe-delete";
+    swipeDelete.textContent = "Delete";
+    swipeDelete.setAttribute("aria-label", `Delete ${item.name}`);
+    swipeDelete.addEventListener("click", () => requestDelete(item.id, item.name));
+    li.append(swipeDelete, content);
     return li;
+  }
+
+  function requestDelete(id: string, name: string): void {
+    pendingDeleteId = id;
+    deleteConfirmMessage.textContent = `This will permanently remove ${name} from your list.`;
+    deleteDialog.showModal();
   }
 
   function render(): void {
@@ -254,11 +330,19 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     deleteDialog.showModal();
   });
 
-  cancelDeleteBtn.addEventListener("click", () => deleteDialog.close());
+  cancelDeleteBtn.addEventListener("click", () => {
+    pendingDeleteId = null;
+    deleteDialog.close();
+  });
 
   confirmDeleteBtn.addEventListener("click", () => {
     if (!deleteDialog.open) return;
-    setItems(removeItems(items, selectedIds));
+    if (pendingDeleteId) {
+      setItems(removeItem(items, pendingDeleteId));
+      pendingDeleteId = null;
+    } else {
+      setItems(removeItems(items, selectedIds));
+    }
     selectedIds.clear();
     selectionMode = false;
     deleteDialog.close();
