@@ -49,8 +49,10 @@ export const appTemplate = `
       <ul id="list"></ul>
       <p id="empty-state" class="empty-state">Your list is looking fresh. Add your first item above.</p>
     </section>
-    <button id="uncheck" class="secondary"><span aria-hidden="true">↻</span> Start a new trip</button>
   </main>
+  <footer class="trip-footer">
+    <button id="uncheck" class="secondary"><span aria-hidden="true">↻</span> Start a new trip</button>
+  </footer>
   </div>
   <dialog id="confirm-delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-confirm-message">
     <div class="dialog-content">

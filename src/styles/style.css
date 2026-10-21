@@ -13,9 +13,11 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: #f5f7f1; }
-#app { width: min(100%, 620px); margin: 0 auto; padding: 0 18px calc(42px + env(safe-area-inset-bottom, 0px)); }
+#app { width: min(100%, 620px); height: 100vh; height: 100dvh; margin: 0 auto; padding: 0 18px; overflow: hidden; }
+#home-page { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .hero {
   position: relative;
+  flex: 0 0 auto;
   overflow: hidden;
   margin: 0 -18px;
   padding: calc(34px + env(safe-area-inset-top, 0px)) 24px 24px;
@@ -43,7 +45,9 @@ h1 { position: relative; z-index: 1; margin: 7px 0 3px; font-size: clamp(1.75rem
 .cart-card span { color: #66786a; }
 .cart-card.over-budget { color: #923d27; background: #fff0e8; border-color: #f4c2ab; }
 .cart-card.over-budget span { color: #a04e35; }
-main { padding-top: 19px; }
+main { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding-top: 19px; padding-bottom: 22px; }
+.trip-footer { flex: 0 0 auto; padding: 8px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: #f5f7f1; }
+.trip-footer .secondary { margin-top: 0; }
 .budget-form { margin: 0 0 16px; padding: 12px 14px; border: 1px solid #e2e9df; border-radius: 14px; background: #fff; }
 .budget-currency-row { position: relative; display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
 .budget-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 7px; }
