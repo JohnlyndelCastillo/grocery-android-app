@@ -51,6 +51,36 @@ describe("grocery app", () => {
     expect(q("#item-count").textContent).toBe("1 / 2");
   });
 
+  it("filters items into Still needed and In cart tabs as their checked state changes", () => {
+    const { q } = setup([rice, eggs]);
+    expect(q("#needed-count").textContent).toBe("2");
+    expect(q("#cart-count").textContent).toBe("0");
+    expect(q("#list").textContent).toContain("Rice");
+
+    q<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)').click();
+    expect(q("#list").textContent).not.toContain("Rice");
+    expect(q("#needed-count").textContent).toBe("1");
+    expect(q("#cart-count").textContent).toBe("1");
+
+    q<HTMLButtonElement>("#cart-tab").click();
+    expect(q("#list").textContent).toContain("Rice");
+    q<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)').click();
+    expect(q("#needed-tab").getAttribute("aria-selected")).toBe("false");
+    q<HTMLButtonElement>("#needed-tab").click();
+    expect(q("#list").textContent).toContain("Rice");
+  });
+
+  it("shows a tab-specific empty state after marking every item in cart", () => {
+    const { q } = setup([rice, eggs]);
+    q<HTMLInputElement>("#check-all").click();
+    expect(q("#needed-count").textContent).toBe("0");
+    expect(q<HTMLElement>("#empty-state").hidden).toBe(false);
+    expect(q("#empty-state").textContent).toContain("Nothing left to shop for");
+    q<HTMLButtonElement>("#cart-tab").click();
+    expect(q("#list").textContent).toContain("Rice");
+    expect(q("#list").textContent).toContain("Eggs");
+  });
+
   it("flags the cart card when over budget", () => {
     const { q } = setup([{ ...rice, checked: true }], 80);
     expect(q("#cart-card").classList.contains("over-budget")).toBe(true);
@@ -74,6 +104,54 @@ describe("grocery app", () => {
     q<HTMLButtonElement>("#confirm-delete").click();
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
+  });
+
+  it("selects all for bulk deletion only in the active tab", () => {
+    const { q } = setup([{ ...rice, checked: true }, eggs]);
+    q<HTMLButtonElement>("#toggle-select").click();
+    q<HTMLInputElement>("#select-all").click();
+    expect(q<HTMLInputElement>('.select-item[aria-label="Select Eggs for deletion"]').checked).toBe(true);
+    q<HTMLButtonElement>("#cart-tab").click();
+    expect(q<HTMLInputElement>("#select-all").checked).toBe(false);
+    q<HTMLInputElement>("#select-all").click();
+    q<HTMLButtonElement>("#delete-selected").click();
+    q<HTMLButtonElement>("#confirm-delete").click();
+    q<HTMLButtonElement>("#needed-tab").click();
+    expect(q("#list").textContent).toContain("Eggs");
+    q<HTMLButtonElement>("#cart-tab").click();
+    expect(q("#list").textContent).not.toContain("Rice");
+  });
+
+  it("collapses the title and description while retaining the spending summary", () => {
+    const { q } = setup([rice]);
+    const toggle = q<HTMLButtonElement>("#collapse-header");
+    toggle.click();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("true");
+    expect(q<HTMLElement>(".hero").classList.contains("collapsed")).toBe(true);
+    expect(q<HTMLElement>(".totals").hidden).toBe(false);
+    expect(q("#cart-total").textContent).toContain("0.00");
+    toggle.click();
+    expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("false");
+  });
+
+  it("opens the settings list, shows the app version on About, and returns", () => {
+    const { q } = setup();
+    q<HTMLButtonElement>("#open-settings").click();
+    expect(q<HTMLElement>("#home-page").hidden).toBe(true);
+    expect(q<HTMLElement>("#settings-page").hidden).toBe(false);
+    expect(q<HTMLElement>("#settings-home").textContent).toContain("About");
+    expect(q("#settings-home a")).toBeNull();
+    q<HTMLButtonElement>("#open-about").click();
+    expect(q("#settings-title").textContent).toBe("About");
+    expect(q("#about-page").textContent).toContain("v1.1.1");
+    expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
+    expect(q<HTMLAnchorElement>("#about-page a").href).toBe("https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v1.1.1");
+    q<HTMLButtonElement>("#close-settings").click();
+    expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
+    expect(q("#settings-title").textContent).toBe("Settings");
+    q<HTMLButtonElement>("#close-settings").click();
+    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
   });
 
   it("increments and decrements quantity without going below zero", () => {
@@ -125,5 +203,9 @@ describe("grocery app", () => {
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
     expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
+    expect(q<HTMLElement>("#undo-banner").hidden).toBe(false);
+    q<HTMLButtonElement>("#undo-delete").click();
+    expect(q("#list").textContent).toContain("Rice");
+    expect(q<HTMLElement>("#undo-banner").hidden).toBe(true);
   });
 });

@@ -1,13 +1,16 @@
 import { budgetStatus, parseBudget } from "../domain/budget";
-import { addItem, removeItem, removeItems, setAllChecked, updateItem } from "../domain/items";
+import { ChevronUp, createElement } from "lucide";
+import { addItem, removeItems, setAllChecked, updateItem } from "../domain/items";
 import { cartTotal, checkedCount, lineTotal, plannedTotal } from "../domain/totals";
 import type { Item } from "../domain/types";
 import type { GroceryStorage } from "../storage/storage";
 import { budgetMessage, currencyFormatter, type CurrencyCode } from "./format";
 import { appTemplate } from "./template";
+import { mountSettingsPage } from "./settings";
 
 export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   root.innerHTML = appTemplate;
+  mountSettingsPage(root);
   const $ = <T extends HTMLElement>(sel: string): T => root.querySelector<T>(sel)!;
 
   const listEl = $<HTMLUListElement>("#list");
@@ -26,6 +29,11 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   const selectAllEl = $<HTMLInputElement>("#select-all");
   const deleteSelectedBtn = $<HTMLButtonElement>("#delete-selected");
   const checkAllEl = $<HTMLInputElement>("#check-all");
+  const neededTab = $<HTMLButtonElement>("#needed-tab");
+  const cartTab = $<HTMLButtonElement>("#cart-tab");
+  const listTabs = $(".list-tabs");
+  const neededCount = $("#needed-count");
+  const cartCount = $("#cart-count");
   const deleteDialog = $<HTMLDialogElement>("#confirm-delete-dialog");
   const deleteConfirmMessage = $("#delete-confirm-message");
   const cancelDeleteBtn = $<HTMLButtonElement>("#cancel-delete");
@@ -35,6 +43,16 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   const budgetStatusEl = $("#budget-status");
   const currencySelect = $<HTMLSelectElement>("#currency-select");
   const budgetCurrencyEl = $("#budget-currency");
+  const collapseHeaderBtn = $<HTMLButtonElement>("#collapse-header");
+  const collapseIcon = createElement(ChevronUp);
+  collapseIcon.classList.add("header-chevron");
+  collapseIcon.setAttribute("aria-hidden", "true");
+  collapseHeaderBtn.append(collapseIcon);
+  const heroTitle = $("#hero-title");
+  const undoBanner = $<HTMLDivElement>("#undo-banner");
+  const undoMessage = $("#undo-message");
+  const undoDeleteBtn = $<HTMLButtonElement>("#undo-delete");
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
   // ---- state ----
   let items: Item[] = storage.loadItems();
@@ -44,8 +62,11 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   let money = currencyFormatter(currency);
   currencySelect.value = currency;
   let selectionMode = false;
+  let activeTab: "needed" | "cart" = "needed";
   let selectedIds = new Set<string>();
   let pendingDeleteId: string | null = null;
+  let deletedSnapshot: Item[] | null = null;
+  let undoTimer = 0;
 
   budgetInput.value = dailyBudget === null ? "" : String(dailyBudget);
 
@@ -80,8 +101,10 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     const n = selectedIds.size;
     deleteSelectedBtn.textContent = n ? `Delete selected (${n})` : "Delete selected";
     deleteSelectedBtn.disabled = n === 0;
-    selectAllEl.checked = items.length > 0 && n === items.length;
-    selectAllEl.indeterminate = n > 0 && n < items.length;
+    const visibleItems = items.filter((item) => activeTab === "needed" ? !item.checked : item.checked);
+    const visibleSelected = visibleItems.filter((item) => selectedIds.has(item.id)).length;
+    selectAllEl.checked = visibleItems.length > 0 && visibleSelected === visibleItems.length;
+    selectAllEl.indeterminate = visibleSelected > 0 && visibleSelected < visibleItems.length;
   }
 
   // Every change to `items` goes through here: swap, save, refresh totals.
@@ -118,7 +141,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     check.addEventListener("change", () => {
       li.classList.toggle("done", check.checked);
       setItems(updateItem(items, item.id, { checked: check.checked }));
-      updateProgress();
+      render(true);
     });
 
     const select = document.createElement("input");
@@ -197,8 +220,7 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     del.textContent = "✕";
     del.setAttribute("aria-label", `Delete ${item.name}`);
     del.addEventListener("click", () => {
-      setItems(removeItem(items, item.id));
-      render();
+      deleteWithUndo(new Set([item.id]), `${item.name} deleted.`);
     });
 
     let startX = 0;
@@ -252,12 +274,47 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     deleteDialog.showModal();
   }
 
-  function render(): void {
-    listEl.replaceChildren(...items.map(renderRow));
-    emptyStateEl.hidden = items.length > 0;
+  function render(animateListChange = false): void {
+    const needed = items.filter((item) => !item.checked);
+    const inCart = items.filter((item) => item.checked);
+    neededCount.textContent = String(needed.length);
+    cartCount.textContent = String(inCart.length);
+    neededTab.setAttribute("aria-selected", String(activeTab === "needed"));
+    cartTab.setAttribute("aria-selected", String(activeTab === "cart"));
+    listTabs.classList.toggle("cart-active", activeTab === "cart");
+    neededTab.tabIndex = activeTab === "needed" ? 0 : -1;
+    cartTab.tabIndex = activeTab === "cart" ? 0 : -1;
+    listEl.replaceChildren(...(activeTab === "needed" ? needed : inCart).map(renderRow));
+    if (animateListChange && !reduceMotion && typeof listEl.animate === "function") {
+      listEl.animate(
+        [
+          { opacity: 0.35, transform: "translateY(5px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        { duration: 220, easing: "cubic-bezier(.2,.75,.25,1)" },
+      );
+    }
+    emptyStateEl.textContent = activeTab === "needed" ? "Nothing left to shop for. You’re all set!" : "No items in your cart yet.";
+    emptyStateEl.hidden = (activeTab === "needed" ? needed : inCart).length > 0;
     updateProgress();
     updateBulkActions();
     updateTotals();
+  }
+
+  function selectTab(tab: "needed" | "cart"): void {
+    activeTab = tab;
+    selectedIds.clear();
+    render(true);
+  }
+
+  function deleteWithUndo(ids: Set<string>, message: string): void {
+    deletedSnapshot = items.filter((item) => ids.has(item.id));
+    setItems(removeItems(items, ids));
+    undoMessage.textContent = message;
+    undoBanner.hidden = false;
+    window.clearTimeout(undoTimer);
+    undoTimer = window.setTimeout(() => { undoBanner.hidden = true; deletedSnapshot = null; }, 6000);
+    render(true);
   }
 
   // ---- events ----
@@ -268,6 +325,23 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
     money = currencyFormatter(currency);
     localStorage.setItem("grocery-currency-v1", currency);
     budgetCurrencyEl.textContent = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;
+    render();
+  });
+
+  collapseHeaderBtn.addEventListener("click", () => {
+    const collapsed = collapseHeaderBtn.getAttribute("aria-expanded") === "true";
+    collapseHeaderBtn.setAttribute("aria-expanded", String(!collapsed));
+    collapseHeaderBtn.setAttribute("aria-label", collapsed ? "Expand header" : "Collapse header");
+    heroTitle.setAttribute("aria-hidden", String(collapsed));
+    root.querySelector(".hero")?.classList.toggle("collapsed", collapsed);
+  });
+
+  undoDeleteBtn.addEventListener("click", () => {
+    if (!deletedSnapshot) return;
+    setItems([...items, ...deletedSnapshot]);
+    deletedSnapshot = null;
+    undoBanner.hidden = true;
+    window.clearTimeout(undoTimer);
     render();
   });
 
@@ -304,13 +378,16 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
 
   uncheckBtn.addEventListener("click", () => {
     setItems(setAllChecked(items, false));
-    render();
+    render(true);
   });
 
   checkAllEl.addEventListener("change", () => {
     setItems(setAllChecked(items, checkAllEl.checked));
-    render();
+    render(true);
   });
+
+  neededTab.addEventListener("click", () => selectTab("needed"));
+  cartTab.addEventListener("click", () => selectTab("cart"));
 
   toggleSelectBtn.addEventListener("click", () => {
     selectionMode = !selectionMode;
@@ -319,7 +396,8 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   });
 
   selectAllEl.addEventListener("change", () => {
-    selectedIds = selectAllEl.checked ? new Set(items.map((i) => i.id)) : new Set();
+    const visibleItems = items.filter((item) => activeTab === "needed" ? !item.checked : item.checked);
+    selectedIds = selectAllEl.checked ? new Set(visibleItems.map((item) => item.id)) : new Set();
     render();
   });
 
@@ -338,15 +416,15 @@ export function mountApp(root: HTMLElement, storage: GroceryStorage): void {
   confirmDeleteBtn.addEventListener("click", () => {
     if (!deleteDialog.open) return;
     if (pendingDeleteId) {
-      setItems(removeItem(items, pendingDeleteId));
+      deleteWithUndo(new Set([pendingDeleteId]), "Item deleted.");
       pendingDeleteId = null;
     } else {
-      setItems(removeItems(items, selectedIds));
+      deleteWithUndo(selectedIds, `${selectedIds.size} items deleted.`);
     }
     selectedIds.clear();
     selectionMode = false;
     deleteDialog.close();
-    render();
+    if (undoBanner.hidden) render();
   });
 
   budgetCurrencyEl.textContent = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? currency;

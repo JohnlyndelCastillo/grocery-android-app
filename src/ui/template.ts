@@ -1,8 +1,13 @@
 export const appTemplate = `
+  <div id="home-page">
   <header class="hero">
+    <button id="open-settings" class="settings-button" type="button" aria-label="Open settings"></button>
+    <div id="hero-title">
     <div class="eyebrow">YOUR MARKET RUN</div>
     <h1>Grocery list<span class="hero-mark" aria-hidden="true">✳</span></h1>
     <p>Keep track of what you need and what’s in your cart.</p>
+    </div>
+    <button id="collapse-header" class="hero-toggle" type="button" aria-expanded="true" aria-controls="hero-title" aria-label="Collapse header"></button>
     <div class="totals" aria-label="Spending summary">
       <div id="cart-card" class="total-card cart-card"><span>In your cart</span><strong id="cart-total"></strong></div>
       <div class="total-card"><span>Planned total</span><strong id="planned-total"></strong></div>
@@ -10,7 +15,8 @@ export const appTemplate = `
   </header>
   <main>
     <form id="budget-form" class="budget-form">
-      <div class="budget-heading"><label for="budget-input">Today’s budget</label><label class="currency-choice" for="currency-select">Currency<select id="currency-select"><option value="PHP">Philippine peso (PHP)</option><option value="VND">Vietnamese đồng (VND)</option><option value="USD">US dollar (USD)</option></select></label></div>
+      <div class="budget-currency-row"><label class="currency-choice" for="currency-select">Currency<select id="currency-select"><option value="PHP">Philippine peso (PHP)</option><option value="VND">Vietnamese đồng (VND)</option><option value="USD">US dollar (USD)</option></select></label><span class="currency-help"><button type="button" aria-label="About currency selection" aria-describedby="currency-tooltip">i</button><span id="currency-tooltip" role="tooltip">Changing currency updates formatting only; it doesn’t convert your amounts.</span></span></div>
+      <div class="budget-heading"><label for="budget-input">Today’s budget</label></div>
       <div class="budget-controls">
         <span id="budget-currency" aria-hidden="true">₱</span>
         <input id="budget-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Set a spending limit" />
@@ -32,6 +38,10 @@ export const appTemplate = `
         <span id="progress-fill"></span>
       </div>
       <div class="check-all-row"><label><input id="check-all" type="checkbox" /> Mark all in cart</label></div>
+      <div class="list-tabs" role="tablist" aria-label="Filter grocery items">
+        <button id="needed-tab" class="list-tab" type="button" role="tab" aria-controls="list" aria-selected="true">Still needed <span id="needed-count">0</span></button>
+        <button id="cart-tab" class="list-tab" type="button" role="tab" aria-controls="list" aria-selected="false" tabindex="-1">In cart <span id="cart-count">0</span></button>
+      </div>
       <div id="bulk-actions" class="bulk-actions" hidden>
         <label><input id="select-all" type="checkbox" /> Select all to delete</label>
         <button id="delete-selected" type="button" disabled>Delete selected</button>
@@ -41,6 +51,7 @@ export const appTemplate = `
     </section>
     <button id="uncheck" class="secondary"><span aria-hidden="true">↻</span> Start a new trip</button>
   </main>
+  </div>
   <dialog id="confirm-delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-confirm-message">
     <div class="dialog-content">
       <h2 id="delete-dialog-title">Delete selected items?</h2>
@@ -51,4 +62,5 @@ export const appTemplate = `
       </div>
     </div>
   </dialog>
+  <div id="undo-banner" class="undo-banner" role="status" aria-live="polite" hidden><span id="undo-message">Item deleted.</span><button id="undo-delete" type="button">Undo</button></div>
 `;
