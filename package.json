@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
-    "@capacitor/core": "^8.5.3"
+    "@capacitor/core": "^8.5.3",
+    "lucide": "^1.61.0"
   }
 }
