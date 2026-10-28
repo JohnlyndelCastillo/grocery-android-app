@@ -1,8 +1,10 @@
 import { defineConfig } from "vitest/config";
+import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
@@ -18,6 +20,9 @@ export default defineConfig({
       }
     })
   ],
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   test: {
     environment: "jsdom",
     include: ["tests/**/*.test.ts"]

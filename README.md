@@ -71,7 +71,10 @@ The app has no account or backend. Grocery items, prices, quantities, and budget
 
 ## Project structure
 
-- `src/` — app UI, styles, domain logic, and storage.
+- `src/ui/` — React app state and focused UI components for the header, budget, list rows, settings, and dialogs.
+- `src/styles/style.css` — Tailwind utilities plus the app's theme and small custom interaction styles.
+- `src/domain/` — framework-independent grocery, totals, and budget logic.
+- `src/storage/` — local persistence for grocery items, budget, and currency.
 - `public/` — app icons and static assets.
 - `assets/` — source artwork.
 - `android/` — Capacitor Android project.

@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
 import { mountApp } from "../../src/ui/app";
@@ -7,10 +8,17 @@ import { mountApp } from "../../src/ui/app";
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
 const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
 const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+let unmount = () => {};
+
+afterEach(() => {
+  act(() => unmount());
+  document.body.replaceChildren();
+});
 
 function setup(items: Item[] = [], budget: number | null = null) {
   const storage: GroceryStorage = {
@@ -21,10 +29,11 @@ function setup(items: Item[] = [], budget: number | null = null) {
   };
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  mountApp(root, storage);
+  act(() => { unmount = mountApp(root, storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
-  const submit = (sel: string) => q(sel).dispatchEvent(new Event("submit", { cancelable: true }));
-  return { root, storage, q, submit };
+  const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
+  const submit = (sel: string) => act(() => q(sel).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  return { root, storage, q, click, submit };
 }
 
 describe("grocery app", () => {
@@ -43,40 +52,40 @@ describe("grocery app", () => {
   });
 
   it("moves the cart total when an item is checked", () => {
-    const { q } = setup([rice, eggs]);
-    expect(q("#cart-total").textContent).toContain("0.00");
-    q<HTMLInputElement>("li input[type=checkbox]:not(.select-item)").click();
-    expect(q("#cart-total").textContent).toContain("100.00");
-    expect(q("#planned-total").textContent).toContain("130.00");
+    const { q, click } = setup([rice, eggs]);
+    expect(q("#cart-card strong").textContent).toContain("0.00");
+    click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
+    expect(q("#cart-card strong").textContent).toContain("100.00");
+    expect(q(".totals .total-card:nth-child(2) strong").textContent).toContain("130.00");
     expect(q("#item-count").textContent).toBe("1 / 2");
   });
 
   it("filters items into Still needed and In cart tabs as their checked state changes", () => {
-    const { q } = setup([rice, eggs]);
-    expect(q("#needed-count").textContent).toBe("2");
-    expect(q("#cart-count").textContent).toBe("0");
+    const { q, click } = setup([rice, eggs]);
+    expect(q("#needed-tab").textContent).toContain("Still needed 2");
+    expect(q("#cart-tab").textContent).toContain("In cart 0");
     expect(q("#list").textContent).toContain("Rice");
 
-    q<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)').click();
+    click<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)');
     expect(q("#list").textContent).not.toContain("Rice");
-    expect(q("#needed-count").textContent).toBe("1");
-    expect(q("#cart-count").textContent).toBe("1");
+    expect(q("#needed-tab").textContent).toContain("Still needed 1");
+    expect(q("#cart-tab").textContent).toContain("In cart 1");
 
-    q<HTMLButtonElement>("#cart-tab").click();
+    click<HTMLButtonElement>("#cart-tab");
     expect(q("#list").textContent).toContain("Rice");
-    q<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)').click();
+    click<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)');
     expect(q("#needed-tab").getAttribute("aria-selected")).toBe("false");
-    q<HTMLButtonElement>("#needed-tab").click();
+    click<HTMLButtonElement>("#needed-tab");
     expect(q("#list").textContent).toContain("Rice");
   });
 
   it("shows a tab-specific empty state after marking every item in cart", () => {
-    const { q } = setup([rice, eggs]);
-    q<HTMLInputElement>("#check-all").click();
-    expect(q("#needed-count").textContent).toBe("0");
+    const { q, click } = setup([rice, eggs]);
+    click<HTMLInputElement>("#check-all");
+    expect(q("#needed-tab").textContent).toContain("Still needed 0");
     expect(q<HTMLElement>("#empty-state").hidden).toBe(false);
     expect(q("#empty-state").textContent).toContain("Nothing left to shop for");
-    q<HTMLButtonElement>("#cart-tab").click();
+    click<HTMLButtonElement>("#cart-tab");
     expect(q("#list").textContent).toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
   });
@@ -96,74 +105,74 @@ describe("grocery app", () => {
   });
 
   it("deletes selected items after confirming", () => {
-    const { q } = setup([rice, eggs]);
-    q<HTMLButtonElement>("#toggle-select").click();
-    q<HTMLInputElement>(".select-item").click();
-    q<HTMLButtonElement>("#delete-selected").click();
+    const { q, click } = setup([rice, eggs]);
+    click<HTMLButtonElement>("#toggle-select");
+    click<HTMLInputElement>(".select-item");
+    click<HTMLButtonElement>("#delete-selected");
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
-    q<HTMLButtonElement>("#confirm-delete").click();
+    click<HTMLButtonElement>("#confirm-delete");
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
   });
 
   it("selects all for bulk deletion only in the active tab", () => {
-    const { q } = setup([{ ...rice, checked: true }, eggs]);
-    q<HTMLButtonElement>("#toggle-select").click();
-    q<HTMLInputElement>("#select-all").click();
+    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
+    click<HTMLButtonElement>("#toggle-select");
+    click<HTMLInputElement>("#select-all");
     expect(q<HTMLInputElement>('.select-item[aria-label="Select Eggs for deletion"]').checked).toBe(true);
-    q<HTMLButtonElement>("#cart-tab").click();
+    click<HTMLButtonElement>("#cart-tab");
     expect(q<HTMLInputElement>("#select-all").checked).toBe(false);
-    q<HTMLInputElement>("#select-all").click();
-    q<HTMLButtonElement>("#delete-selected").click();
-    q<HTMLButtonElement>("#confirm-delete").click();
-    q<HTMLButtonElement>("#needed-tab").click();
+    click<HTMLInputElement>("#select-all");
+    click<HTMLButtonElement>("#delete-selected");
+    click<HTMLButtonElement>("#confirm-delete");
+    click<HTMLButtonElement>("#needed-tab");
     expect(q("#list").textContent).toContain("Eggs");
-    q<HTMLButtonElement>("#cart-tab").click();
+    click<HTMLButtonElement>("#cart-tab");
     expect(q("#list").textContent).not.toContain("Rice");
   });
 
   it("collapses the title and description while retaining the spending summary", () => {
     const { q } = setup([rice]);
     const toggle = q<HTMLButtonElement>("#collapse-header");
-    toggle.click();
+    act(() => toggle.click());
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("true");
     expect(q<HTMLElement>(".hero").classList.contains("collapsed")).toBe(true);
     expect(q<HTMLElement>(".totals").hidden).toBe(false);
-    expect(q("#cart-total").textContent).toContain("0.00");
-    toggle.click();
+    expect(q("#cart-card strong").textContent).toContain("0.00");
+    act(() => toggle.click());
     expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("false");
   });
 
   it("opens the settings list, shows the app version on About, and returns", () => {
-    const { q } = setup();
-    q<HTMLButtonElement>("#open-settings").click();
+    const { q, click } = setup();
+    click<HTMLButtonElement>("#open-settings");
     expect(q<HTMLElement>("#home-page").hidden).toBe(true);
     expect(q<HTMLElement>("#settings-page").hidden).toBe(false);
     expect(q<HTMLElement>("#settings-home").textContent).toContain("About");
     expect(q("#settings-home a")).toBeNull();
-    q<HTMLButtonElement>("#open-about").click();
+    click<HTMLButtonElement>("#open-about");
     expect(q("#settings-title").textContent).toBe("About");
     expect(q("#about-page").textContent).toContain("v1.1.1");
     expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
     expect(q<HTMLAnchorElement>("#about-page a").href).toBe("https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v1.1.1");
-    q<HTMLButtonElement>("#close-settings").click();
+    click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
     expect(q("#settings-title").textContent).toBe("Settings");
-    q<HTMLButtonElement>("#close-settings").click();
+    click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#home-page").hidden).toBe(false);
   });
 
   it("increments and decrements quantity without going below zero", () => {
-    const { q, storage } = setup([eggs]);
+    const { q, click, storage } = setup([eggs]);
     const qty = q<HTMLInputElement>(".qty");
 
-    q<HTMLButtonElement>('[aria-label="Increase quantity of Eggs"]').click();
+    click<HTMLButtonElement>('[aria-label="Increase quantity of Eggs"]');
     expect(qty.value).toBe("2");
     expect(q(".item-subtotal").textContent).toContain("60.00");
 
-    q<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]').click();
-    q<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]').click();
+    click<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]');
+    click<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]');
     expect(qty.value).toBe("0");
     expect(q(".item-subtotal").textContent).toContain("0.00");
     expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...eggs, qty: 0 }]);
@@ -173,8 +182,10 @@ describe("grocery app", () => {
     const longNameItem = { ...eggs, name: "A very long grocery item name" };
     const { q, storage } = setup([longNameItem]);
     const qty = q<HTMLInputElement>(".qty");
-    qty.value = "3";
-    qty.dispatchEvent(new Event("input", { bubbles: true }));
+    act(() => {
+      qty.value = "3";
+      qty.dispatchEvent(new Event("input", { bubbles: true }));
+    });
 
     expect(q(".item-title-row .name").textContent).toBe(longNameItem.name);
     expect(q(".item-details-row .item-subtotal").textContent).toContain("90.00");
@@ -182,13 +193,13 @@ describe("grocery app", () => {
   });
 
   it("reveals and confirms single-item deletion from the swipe action", () => {
-    const { q, storage } = setup([rice, eggs]);
+    const { q, click, storage } = setup([rice, eggs]);
     const swipeDelete = q<HTMLButtonElement>('[aria-label="Delete Rice"]');
-    swipeDelete.click();
+    act(() => swipeDelete.click());
 
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
     expect(q("#delete-confirm-message").textContent).toContain("Rice");
-    q<HTMLButtonElement>("#confirm-delete").click();
+    click<HTMLButtonElement>("#confirm-delete");
 
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
@@ -196,15 +207,15 @@ describe("grocery app", () => {
   });
 
   it("deletes immediately when the per-item x button is clicked", () => {
-    const { q, storage } = setup([rice, eggs]);
-    q<HTMLButtonElement>('.del[aria-label="Delete Rice"]').click();
+    const { q, click, storage } = setup([rice, eggs]);
+    click<HTMLButtonElement>('.del[aria-label="Delete Rice"]');
 
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(false);
     expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
     expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
     expect(q<HTMLElement>("#undo-banner").hidden).toBe(false);
-    q<HTMLButtonElement>("#undo-delete").click();
+    click<HTMLButtonElement>("#undo-delete");
     expect(q("#list").textContent).toContain("Rice");
     expect(q<HTMLElement>("#undo-banner").hidden).toBe(true);
   });
