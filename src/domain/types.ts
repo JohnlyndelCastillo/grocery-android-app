@@ -6,3 +6,5 @@ export interface Item {
   price: number; // price per unit
   checked: boolean; // true = already in the cart
 }
+
+export type CurrencyCode = "PHP" | "VND" | "USD";
