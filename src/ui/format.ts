@@ -1,6 +1,7 @@
 import type { BudgetStatus } from "../domain/budget";
+import type { CurrencyCode } from "../domain/types";
 
-export type CurrencyCode = "PHP" | "VND" | "USD";
+export type { CurrencyCode };
 const currencyLocales: Record<CurrencyCode, string> = { PHP: "en-PH", VND: "vi-VN", USD: "en-US" };
 
 export function currencyFormatter(currency: CurrencyCode): Intl.NumberFormat {
@@ -13,4 +14,9 @@ export function budgetMessage(s: BudgetStatus, format: Intl.NumberFormat): strin
     case "exact": return "You’re right at today’s budget.";
     case "left": return format.format(s.amount) + " left for today";
   }
+}
+
+// "₱", "₫" or "$": the symbol for whichever currency the formatter was built with.
+export function currencySymbol(format: Intl.NumberFormat): string {
+  return format.formatToParts(0).find((part) => part.type === "currency")?.value ?? "";
 }
