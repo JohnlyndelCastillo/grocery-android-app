@@ -40,34 +40,36 @@ body { min-width: 320px; background: var(--color-app); }
 
 [hidden] { display: none !important; }
 
-input, button { font: inherit; }
+@layer base {
+  input, button { font: inherit; }
 
-button {
-  cursor: pointer;
-  border: 0;
-  border-radius: 12px;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity .15s ease, background .15s ease;
+  button {
+    cursor: pointer;
+    border: 0;
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity .15s ease, background .15s ease;
+  }
+
+  button:active { opacity: .72; }
+
+  input:not([type="checkbox"]) {
+    height: 48px;
+    padding: 0 13px;
+    border: 1px solid #dfe6dc;
+    border-radius: 12px;
+    color: var(--color-ink);
+    background: #fff;
+    outline: none;
+  }
+
+  input:not([type="checkbox"]):focus {
+    border-color: #5c9b70;
+    box-shadow: 0 0 0 3px #5c9b7020;
+  }
+
+  input::placeholder { color: #98a399; }
 }
-
-button:active { opacity: .72; }
-
-input:not([type="checkbox"]) {
-  height: 48px;
-  padding: 0 13px;
-  border: 1px solid #dfe6dc;
-  border-radius: 12px;
-  color: var(--color-ink);
-  background: #fff;
-  outline: none;
-}
-
-input:not([type="checkbox"]):focus {
-  border-color: #5c9b70;
-  box-shadow: 0 0 0 3px #5c9b7020;
-}
-
-input::placeholder { color: #98a399; }
 
 #new-name.invalid { border-color: #c84c43; box-shadow: 0 0 0 3px #c84c4320; }
 #new-name.invalid:focus { border-color: #c84c43; box-shadow: 0 0 0 3px #c84c4330; }
