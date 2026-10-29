@@ -92,14 +92,6 @@ body { min-width: 320px; background: var(--color-app); }
   content: "";
 }
 
-.hero.collapsed #hero-title { max-height: 0; opacity: 0; }
-.hero.collapsed .hero-toggle { margin-bottom: 8px; }
-
-.cart-card { border-color: #fff; background: #fff; color: var(--green-dark); }
-.cart-card span { color: #66786a; }
-.cart-card.over-budget { border-color: #f4c2ab; background: #fff0e8; color: #923d27; }
-.cart-card.over-budget span { color: #a04e35; }
-
 .list-tabs::before {
   position: absolute;
   z-index: -1;
@@ -123,7 +115,6 @@ li.done { background: #f0f5ef; }
 li.done .name { color: #89958b; text-decoration: line-through; }
 li.done .item-subtotal { color: #8e9a90; }
 li.done .swipe-content { background: #f0f5ef; }
-li.is-swiped .swipe-content { transform: translateX(-76px); }
 
 li input[type="checkbox"] {
   appearance: none;
@@ -156,8 +147,6 @@ li input[type="checkbox"]:checked::after {
 .quantity-control .qty { width: 30px; height: 34px !important; padding: 0 2px !important; border: 0 !important; border-radius: 7px !important; background: transparent; box-shadow: none !important; }
 .qty-step:hover, .qty-step:active, .qty-step:focus, .qty-step:focus-visible { opacity: 1; background: transparent; outline: none; box-shadow: none; }
 .del:hover { color: #b34a42; background: #fff0ed; }
-
-.swipe-content { transition: transform .2s ease; }
 
 @media (hover: hover) and (pointer: fine) {
   .swipe-delete { display: none; }

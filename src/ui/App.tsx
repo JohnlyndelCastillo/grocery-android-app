@@ -171,7 +171,10 @@ export function App({ storage }: AppProps) {
               const count = selectedIds.size;
               openDeleteDialog(`This will permanently remove ${count} ${count === 1 ? "item" : "items"} from your list.`, null);
             }}
-            onChecked={(id, checked) => commitItems(updateItem(items, id, { checked }))}
+            onChecked={(id, checked) => {
+              commitItems(updateItem(items, id, { checked }));
+              changeSelection(id, false);
+            }}
             onSelected={changeSelection}
             onQty={(id, qty) => commitItems(updateItem(items, id, { qty }))}
             onPrice={(id, price) => commitItems(updateItem(items, id, { price }))}
