@@ -77,6 +77,21 @@ describe("swipe", () => {
     expect(isSwiped(q("#list li"))).toBe(true);
   });
 
+  it("only cancels a touchmove while the browser still allows it", () => {
+    const { q } = setup([rice]);
+    const li = q<HTMLLIElement>("#list li");
+    const move = (x: number, cancelable: boolean) => {
+      const event = new Event("touchmove", { bubbles: true, cancelable });
+      Object.assign(event, { touches: [{ clientX: x, clientY: 0 }], changedTouches: [{ clientX: x, clientY: 0 }] });
+      const prevent = vi.spyOn(event, "preventDefault");
+      act(() => { li.dispatchEvent(event); });
+      return prevent;
+    };
+    touch(li, "touchstart", 200);
+    expect(move(150, true)).toHaveBeenCalled();      // normal swipe: we take over the gesture
+    expect(move(120, false)).not.toHaveBeenCalled(); // browser is already scrolling: leave it alone
+  });
+
   it("ignores swipes in select mode", () => {
     const { q, click } = setup([rice]);
     click("#toggle-select");

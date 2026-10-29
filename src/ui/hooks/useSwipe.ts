@@ -32,7 +32,9 @@ export function useSwipe(ref: RefObject<HTMLElement | null>, options: SwipeOptio
       const dx = event.touches[0].clientX - startX;
       const dy = event.touches[0].clientY - startY;
       if (!swiping && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) swiping = true;
-      if (swiping) event.preventDefault();
+      // Once the browser has started scrolling the event can no longer be cancelled, and trying to
+      // only makes Chrome log "[Intervention] Ignored attempt to cancel a touchmove event".
+      if (swiping && event.cancelable) event.preventDefault();
     };
     const onEnd = (event: TouchEvent): void => {
       if (latest.current.disabled || !swiping) return;

@@ -1,21 +1,37 @@
-import type { RefObject } from "react";
+import { useEffect, useRef } from "react";
 
 interface DeleteDialogProps {
-  dialogRef: RefObject<HTMLDialogElement | null>;
+  open: boolean;
   message: string;
   onCancel(): void;
   onConfirm(): void;
 }
 
-export function DeleteDialog({ dialogRef, message, onCancel, onConfirm }: DeleteDialogProps) {
+export function DeleteDialog({ open, message, onCancel, onConfirm }: DeleteDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // `open` is the single source of truth; this keeps the native <dialog> in step with it.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    } else if (!open && dialog.open) {
+      if (typeof dialog.close === "function") dialog.close();
+      else dialog.removeAttribute("open");
+    }
+  }, [open]);
+
   return (
     <dialog
       ref={dialogRef}
       id="confirm-delete-dialog"
-      className="w-[min(calc(100%-36px),400px)] rounded-[18px] border-0 p-0 text-ink shadow-[0_18px_60px_#10271940]"
+      className="m-auto w-[min(calc(100%-36px),400px)] rounded-[18px] border-0 p-0 text-ink shadow-[0_18px_60px_#10271940]"
       aria-labelledby="delete-dialog-title"
       aria-describedby="delete-confirm-message"
       onCancel={(event) => {
+        // Esc: let state close the dialog instead of the browser, so the two can't disagree.
         event.preventDefault();
         onCancel();
       }}
