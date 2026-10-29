@@ -45,7 +45,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
       onClick={(event) => {
         if (!(event.target as HTMLElement).closest("button, input")) onSwipe(item.id, false);
       }}
-      className={`group swipe-row relative mb-2 flex min-h-16 items-center overflow-hidden rounded-[15px] border border-line bg-white shadow-[0_2px_7px_#263d2d08] ${item.checked ? "done" : ""}`}
+      className={`group swipe-row touch-pan-y relative mb-2 flex min-h-16 items-center overflow-hidden rounded-[15px] border border-line bg-white shadow-[0_2px_7px_#263d2d08] ${item.checked ? "done" : ""}`}
     >
       <button
         className="swipe-delete absolute inset-y-0 right-0 w-[84px] rounded-none bg-[#ad5147] text-[.82rem] font-bold text-white"

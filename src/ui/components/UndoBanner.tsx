@@ -1,9 +1,4 @@
-import type { Item } from "../../domain/types";
-
-export interface UndoAction {
-  items: Item[];
-  message: string;
-}
+import type { UndoAction } from "../types";
 
 interface UndoBannerProps {
   undo: UndoAction | null;
