@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
 import { mountApp } from "../../src/ui/app";
@@ -6,10 +7,17 @@ import { mountApp } from "../../src/ui/app";
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
 const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
 const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+let unmount = () => {};
+
+afterEach(() => {
+  act(() => unmount());
+  document.body.replaceChildren();
+});
 
 function setup(items: Item[]) {
   const storage: GroceryStorage = {
@@ -20,8 +28,10 @@ function setup(items: Item[]) {
   };
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  mountApp(root, storage);
-  return { q: <T extends Element>(sel: string) => root.querySelector<T>(sel)! };
+  act(() => { unmount = mountApp(root, storage); });
+  const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+  const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
+  return { q, click };
 }
 
 describe("regressions", () => {
@@ -33,29 +43,29 @@ describe("regressions", () => {
   });
 
   it("leaves select mode right after a bulk delete", () => {
-    const { q } = setup([rice, eggs]);
-    q<HTMLButtonElement>("#toggle-select").click();
-    q<HTMLInputElement>(".select-item").click();
-    q<HTMLButtonElement>("#delete-selected").click();
-    q<HTMLButtonElement>("#confirm-delete").click();
+    const { q, click } = setup([rice, eggs]);
+    click<HTMLButtonElement>("#toggle-select");
+    click<HTMLInputElement>(".select-item");
+    click<HTMLButtonElement>("#delete-selected");
+    click<HTMLButtonElement>("#confirm-delete");
     expect(q<HTMLElement>("#bulk-actions").hidden).toBe(true);
     expect(q("#toggle-select").textContent).toBe("Select Items");
   });
 
   it("says '1 item deleted' (singular) for a one-item bulk delete", () => {
-    const { q } = setup([rice, eggs]);
-    q<HTMLButtonElement>("#toggle-select").click();
-    q<HTMLInputElement>(".select-item").click();
-    q<HTMLButtonElement>("#delete-selected").click();
-    q<HTMLButtonElement>("#confirm-delete").click();
+    const { q, click } = setup([rice, eggs]);
+    click<HTMLButtonElement>("#toggle-select");
+    click<HTMLInputElement>(".select-item");
+    click<HTMLButtonElement>("#delete-selected");
+    click<HTMLButtonElement>("#confirm-delete");
     expect(q("#undo-message").textContent).toBe("1 item deleted.");
   });
 
   it("brings deleted items back with Undo", () => {
-    const { q } = setup([rice, eggs]);
-    q<HTMLButtonElement>(".del").click();
+    const { q, click } = setup([rice, eggs]);
+    click<HTMLButtonElement>(".del");
     expect(q("#list").textContent).not.toContain("Rice");
-    q<HTMLButtonElement>("#undo-delete").click();
+    click<HTMLButtonElement>("#undo-delete");
     expect(q("#list").textContent).toContain("Rice");
   });
 });
