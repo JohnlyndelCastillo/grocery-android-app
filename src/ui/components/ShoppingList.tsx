@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Item } from "../../domain/types";
 import type { Tab } from "../types";
 import { GroceryRow } from "./GroceryRow";
@@ -26,6 +26,7 @@ interface ShoppingListProps {
 }
 
 export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: ShoppingListProps) {
+  const [swipedId, setSwipedId] = useState<string | null>(null);
   const checkAllRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const neededCount = allItems.filter((item) => !item.checked).length;
@@ -92,6 +93,8 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
             pricePlaceholder={pricePlaceholder}
             selecting={selectionMode}
             selected={selectedIds.has(item.id)}
+            swiped={swipedId === item.id}
+            onSwipe={(id, open) => setSwipedId((current) => (open ? id : current === id ? null : current))}
             onChecked={onChecked}
             onSelected={onSelected}
             onQty={onQty}

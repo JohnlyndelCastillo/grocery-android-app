@@ -2,7 +2,7 @@ import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
-import { mountApp } from "../../src/ui/app";
+import { mountApp } from "../helpers/mountApp";
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
 beforeAll(() => {
@@ -92,7 +92,7 @@ describe("grocery app", () => {
 
   it("flags the cart card when over budget", () => {
     const { q } = setup([{ ...rice, checked: true }], 80);
-    expect(q("#cart-card").classList.contains("over-budget")).toBe(true);
+    expect(q("#cart-card").getAttribute("aria-label")).toContain("over today's budget");
     expect(q("#budget-status").textContent).toContain("over");
   });
 
@@ -137,7 +137,6 @@ describe("grocery app", () => {
     act(() => toggle.click());
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("true");
-    expect(q<HTMLElement>(".hero").classList.contains("collapsed")).toBe(true);
     expect(q<HTMLElement>(".totals").hidden).toBe(false);
     expect(q("#cart-card strong").textContent).toContain("0.00");
     act(() => toggle.click());

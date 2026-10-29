@@ -12,7 +12,7 @@ export function Header({ cartTotal, plannedTotal, overBudget, onOpenSettings }: 
 
   return (
     <header
-      className={`hero relative shrink-0 overflow-hidden px-6 text-white shadow-[0_12px_28px_#1d583622] transition-[padding,border-radius] duration-300 max-[380px]:px-[18px] ${collapsed ? "collapsed" : ""}`}
+      className="hero relative shrink-0 overflow-hidden px-6 text-white shadow-[0_12px_28px_#1d583622] transition-[padding,border-radius] duration-300 max-[380px]:px-[18px]"
       style={{
         paddingTop: `calc(${collapsed ? 14 : 34}px + env(safe-area-inset-top, 0px))`,
         paddingBottom: collapsed ? 16 : 24,
@@ -63,10 +63,10 @@ export function Header({ cartTotal, plannedTotal, overBudget, onOpenSettings }: 
       <div className="totals grid grid-cols-2 gap-[10px] transition-[margin] duration-300" style={{ marginTop: collapsed ? 0 : 22 }} aria-label="Spending summary">
         <div
           id="cart-card"
-          className={`total-card cart-card flex min-w-0 flex-col gap-1 rounded-[14px] border px-[14px] py-[13px] ${overBudget ? "over-budget border-[#f4c2ab] bg-[#fff0e8] text-[#923d27]" : "border-white bg-white text-green-dark"}`}
+          className={`total-card flex min-w-0 flex-col gap-1 rounded-[14px] border px-[14px] py-[13px] ${overBudget ? "border-[#f4c2ab] bg-[#fff0e8] text-[#923d27]" : "border-white bg-white text-green-dark"}`}
           aria-label={`In your cart ${cartTotal}${overBudget ? ", over today's budget" : ""}`}
         >
-          <span className={`text-[.75rem] font-medium ${overBudget ? "text-[#a04e35]" : "text-[#e0eee3]"}`}>In your cart</span>
+          <span className={`text-[.75rem] font-medium ${overBudget ? "text-[#a04e35]" : "text-[#66786a]"}`}>In your cart</span>
           <strong className="whitespace-nowrap text-[clamp(1.1rem,5vw,1.4rem)] font-bold tracking-[-.035em]">{cartTotal}</strong>
         </div>
         <div className="total-card flex min-w-0 flex-col gap-1 rounded-[14px] border border-white/15 bg-white/[.07] px-[14px] py-[13px]">

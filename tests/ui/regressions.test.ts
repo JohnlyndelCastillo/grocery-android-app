@@ -2,7 +2,7 @@ import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
-import { mountApp } from "../../src/ui/app";
+import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };

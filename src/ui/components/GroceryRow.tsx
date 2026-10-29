@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { lineTotal } from "../../domain/totals";
 import type { Item } from "../../domain/types";
-import { attachSwipe } from "../swipe";
+import { useSwipe } from "../hooks/useSwipe";
 
 interface GroceryRowProps {
   item: Item;
@@ -9,6 +9,8 @@ interface GroceryRowProps {
   pricePlaceholder: string;
   selecting: boolean;
   selected: boolean;
+  swiped: boolean;
+  onSwipe(id: string, open: boolean): void;
   onChecked(id: string, checked: boolean): void;
   onSelected(id: string, selected: boolean): void;
   onQty(id: string, qty: number): void;
@@ -17,14 +19,15 @@ interface GroceryRowProps {
   onSwipeDelete(id: string, name: string): void;
 }
 
-export function GroceryRow({ item, money, pricePlaceholder, selecting, selected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: GroceryRowProps) {
+export function GroceryRow({ item, money, pricePlaceholder, selecting, selected, swiped, onSwipe, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: GroceryRowProps) {
   const rowRef = useRef<HTMLLIElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const row = rowRef.current;
-    return row ? attachSwipe(row, () => selecting) : undefined;
-  }, [selecting]);
+  useSwipe(rowRef, {
+    disabled: selecting,
+    onSwipeLeft: () => onSwipe(item.id, true),
+    onSwipeRight: () => onSwipe(item.id, false),
+  });
 
   const fieldClass = "h-[38px] rounded-[9px] px-[7px] text-center text-[.83rem]";
 
@@ -38,7 +41,11 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
   return (
     <li
       ref={rowRef}
-      className={`swipe-row relative mb-2 flex min-h-16 items-center overflow-hidden rounded-[15px] border border-line bg-white shadow-[0_2px_7px_#263d2d08] ${item.checked ? "done" : ""}`}
+      data-swiped={swiped}
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest("button, input")) onSwipe(item.id, false);
+      }}
+      className={`group swipe-row relative mb-2 flex min-h-16 items-center overflow-hidden rounded-[15px] border border-line bg-white shadow-[0_2px_7px_#263d2d08] ${item.checked ? "done" : ""}`}
     >
       <button
         className="swipe-delete absolute inset-y-0 right-0 w-[84px] rounded-none bg-[#ad5147] text-[.82rem] font-bold text-white"
@@ -46,7 +53,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
         aria-label={`Delete ${item.name}`}
         onClick={() => onSwipeDelete(item.id, item.name)}
       >Delete</button>
-      <div className={`swipe-content relative z-[1] flex min-h-[62px] w-full items-stretch bg-white p-[10px] transition-transform duration-200 max-[380px]:p-2 ${item.checked ? "bg-[#f0f5ef]" : ""}`}>
+      <div className={`swipe-content relative z-[1] flex min-h-[62px] w-full items-stretch bg-white p-[10px] transition-transform duration-200 group-data-[swiped=true]:-translate-x-[76px] max-[380px]:p-2 ${item.checked ? "bg-[#f0f5ef]" : ""}`}>
         <div className="item-info flex min-w-0 flex-1 flex-col gap-[7px]">
           <div className="item-title-row flex min-w-0 items-start gap-[9px] max-[380px]:gap-[7px]">
             <input
