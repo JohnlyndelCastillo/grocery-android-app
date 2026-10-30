@@ -20,3 +20,10 @@ export function budgetMessage(s: BudgetStatus, format: Intl.NumberFormat): strin
 export function currencySymbol(format: Intl.NumberFormat): string {
   return format.formatToParts(0).find((part) => part.type === "currency")?.value ?? "";
 }
+
+// "Oct 30, 2026, 3:45 PM" in the phone's own locale.
+export function formatReceiptDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}

@@ -3,11 +3,16 @@ import { useEffect, useRef } from "react";
 interface DeleteDialogProps {
   open: boolean;
   message: string;
+  /** Defaults match the item-delete wording. */
+  title?: string;
+  confirmLabel?: string;
+  /** Keeps element ids unique when a second dialog is on the page. */
+  idPrefix?: string;
   onCancel(): void;
   onConfirm(): void;
 }
 
-export function DeleteDialog({ open, message, onCancel, onConfirm }: DeleteDialogProps) {
+export function DeleteDialog({ open, message, title = "Delete selected items?", confirmLabel = "Delete items", idPrefix = "", onCancel, onConfirm }: DeleteDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // `open` is the single source of truth; this keeps the native <dialog> in step with it.
@@ -26,10 +31,10 @@ export function DeleteDialog({ open, message, onCancel, onConfirm }: DeleteDialo
   return (
     <dialog
       ref={dialogRef}
-      id="confirm-delete-dialog"
+      id={`${idPrefix}confirm-delete-dialog`}
       className="m-auto w-[min(calc(100%-36px),400px)] rounded-[18px] border-0 p-0 text-ink shadow-[0_18px_60px_#10271940]"
-      aria-labelledby="delete-dialog-title"
-      aria-describedby="delete-confirm-message"
+      aria-labelledby={`${idPrefix}delete-dialog-title`}
+      aria-describedby={`${idPrefix}delete-confirm-message`}
       onCancel={(event) => {
         // Esc: let state close the dialog instead of the browser, so the two can't disagree.
         event.preventDefault();
@@ -37,11 +42,11 @@ export function DeleteDialog({ open, message, onCancel, onConfirm }: DeleteDialo
       }}
     >
       <div className="w-[min(100%,360px)] p-[23px]">
-        <h2 id="delete-dialog-title" className="mb-2 mt-0 text-[1.15rem] font-bold">Delete selected items?</h2>
-        <p id="delete-confirm-message" className="m-0 text-[.9rem] leading-[1.5] text-muted">{message}</p>
+        <h2 id={`${idPrefix}delete-dialog-title`} className="mb-2 mt-0 text-[1.15rem] font-bold">{title}</h2>
+        <p id={`${idPrefix}delete-confirm-message`} className="m-0 text-[.9rem] leading-[1.5] text-muted">{message}</p>
         <div className="mt-[22px] flex justify-end gap-[9px]">
-          <button id="cancel-delete" className="min-h-[42px] rounded-xl bg-[#edf2eb] px-[14px] text-[.85rem] font-bold text-[#385541]" type="button" onClick={onCancel}>Cancel</button>
-          <button id="confirm-delete" className="min-h-[42px] rounded-xl bg-[#ad5147] px-[14px] text-[.85rem] font-bold text-white" type="button" onClick={onConfirm}>Delete items</button>
+          <button id={`${idPrefix}cancel-delete`} className="min-h-[42px] rounded-xl bg-[#edf2eb] px-[14px] text-[.85rem] font-bold text-[#385541]" type="button" onClick={onCancel}>Cancel</button>
+          <button id={`${idPrefix}confirm-delete`} className="min-h-[42px] rounded-xl bg-[#ad5147] px-[14px] text-[.85rem] font-bold text-white" type="button" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </dialog>

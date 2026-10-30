@@ -20,7 +20,9 @@ afterEach(() => {
 });
 
 function setup(items: Item[]) {
-  const storage: GroceryStorage = { loadItems: () => items, saveItems: vi.fn(), loadDailyBudget: () => null, saveDailyBudget: vi.fn() };
+  const storage: GroceryStorage = { loadItems: () => items, saveItems: vi.fn(), loadDailyBudget: () => null,
+    loadReceipts: () => [],
+    saveReceipts: vi.fn(), saveDailyBudget: vi.fn() };
   const root = document.createElement("div");
   document.body.replaceChildren(root);
   act(() => { unmount = mountApp(root, storage); });

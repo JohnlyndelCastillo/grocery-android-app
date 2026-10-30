@@ -12,6 +12,7 @@ interface ShoppingListProps {
   selectionMode: boolean;
   money: Intl.NumberFormat;
   pricePlaceholder: string;
+  cartText: string;
   onTabChange(tab: Tab): void;
   onCheckAll(checked: boolean): void;
   onSelectAll(checked: boolean): void;
@@ -23,9 +24,10 @@ interface ShoppingListProps {
   onPrice(id: string, price: number): void;
   onQuickDelete(id: string, name: string): void;
   onSwipeDelete(id: string, name: string): void;
+  onFinishTrip(): void;
 }
 
-export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: ShoppingListProps) {
+export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, cartText, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete, onFinishTrip }: ShoppingListProps) {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const checkAllRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -107,6 +109,16 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
       <p id="empty-state" className="m-0 rounded-[15px] border border-dashed border-[#cbd8c9] px-4 py-6 text-center text-[.88rem] text-[#718073]" hidden={visibleItems.length > 0}>
         {activeTab === "needed" ? "Nothing left to shop for. You’re all set!" : "No items in your cart yet."}
       </p>
+      <button
+        id="finish-trip"
+        className="mt-3 block min-h-[46px] w-full rounded-xl bg-green font-bold text-white disabled:cursor-default disabled:opacity-45"
+        type="button"
+        hidden={activeTab !== "cart"}
+        disabled={doneCount === 0}
+        onClick={onFinishTrip}
+      >
+        Finish trip{doneCount > 0 ? ` · ${cartText}` : ""}
+      </button>
     </section>
   );
 }

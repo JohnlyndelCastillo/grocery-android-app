@@ -13,6 +13,8 @@ function setup(items: Item[] = [rice, eggs], budget: number | null = null) {
     loadItems: () => items,
     saveItems: vi.fn(),
     loadDailyBudget: () => budget,
+    loadReceipts: () => [],
+    saveReceipts: vi.fn(),
     saveDailyBudget: vi.fn(),
   };
   const hook = renderHook(() => useGroceryList(storage));
@@ -143,5 +145,53 @@ describe("useGroceryList: budget and currency", () => {
 
     act(() => result.current.changeCurrency("XXX" as CurrencyCode));
     expect(result.current.currency).toBe("USD");
+  });
+});
+
+describe("useGroceryList: finishing a trip", () => {
+  it("saves a receipt of the cart, resets the list and returns to the needed tab", () => {
+    const { result, storage } = setup([rice, eggs], 150);
+    act(() => result.current.changeTab("cart"));
+    act(() => result.current.finishTrip());
+
+    expect(result.current.receipts).toHaveLength(1);
+    expect(result.current.receipts[0]).toMatchObject({ lines: [{ name: "Rice", qty: 2, price: 50 }], total: 100, budget: 150, currency: "PHP" });
+    expect(storage.saveReceipts).toHaveBeenLastCalledWith(result.current.receipts);
+    expect(result.current.doneCount).toBe(0);
+    expect(result.current.items).toHaveLength(2); // the list itself is kept
+    expect(result.current.activeTab).toBe("needed");
+    expect(result.current.notice).toContain("Receipt saved");
+  });
+
+  it("does nothing when the cart is empty", () => {
+    const { result, storage } = setup([{ ...rice, checked: false }, eggs]);
+    act(() => result.current.finishTrip());
+    expect(result.current.receipts).toEqual([]);
+    expect(storage.saveReceipts).not.toHaveBeenCalled();
+    expect(result.current.notice).toBeNull();
+  });
+
+  it("keeps newest receipts first, remembers the currency used, and can delete one", () => {
+    const { result } = setup([rice]);
+    act(() => result.current.changeCurrency("USD"));
+    act(() => result.current.finishTrip());
+    act(() => result.current.checkAll(true));
+    act(() => result.current.finishTrip());
+    expect(result.current.receipts).toHaveLength(2);
+    expect(result.current.receipts[0].currency).toBe("USD");
+
+    const id = result.current.receipts[1].id;
+    act(() => result.current.deleteReceipt(id));
+    expect(result.current.receipts.map((r) => r.id)).not.toContain(id);
+  });
+
+  it("the confirmation notice expires after 4 seconds", () => {
+    vi.useFakeTimers();
+    const { result } = setup();
+    act(() => result.current.finishTrip());
+    act(() => { vi.advanceTimersByTime(3999); });
+    expect(result.current.notice).not.toBeNull();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(result.current.notice).toBeNull();
   });
 });
