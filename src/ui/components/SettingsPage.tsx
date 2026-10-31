@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { version } from "../../../package.json";
-import type { Receipt } from "../../domain/types";
+import type { CurrencyCode, Receipt } from "../../domain/types";
+import { currencyFormatter, currencySymbol } from "../format";
 import type { SettingsView } from "../types";
 import { ReceiptDetail } from "./ReceiptDetail";
 import { ReceiptsList } from "./ReceiptsList";
@@ -9,6 +10,9 @@ interface SettingsPageProps {
   view: SettingsView;
   receipts: Receipt[];
   selectedReceipt: Receipt | null;
+  currency: CurrencyCode;
+  onCurrencyChange(currency: CurrencyCode): void;
+  onOpenCurrency(): void;
   onOpenAbout(): void;
   onOpenReceipts(): void;
   onOpenReceipt(id: string): void;
@@ -19,9 +23,14 @@ interface SettingsPageProps {
 
 // How deep each screen is. Going deeper slides forward, going shallower slides back.
 const releaseUrl = `https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`;
-const depth: Record<SettingsView, number> = { closed: 0, settings: 1, about: 2, receipts: 2, receipt: 3 };
-const titles: Record<SettingsView, string> = { closed: "Settings", settings: "Settings", about: "About", receipts: "Receipts", receipt: "Receipt" };
-const backLabels: Record<SettingsView, string> = { closed: "Back", settings: "Back", about: "Settings", receipts: "Settings", receipt: "Receipts" };
+const depth: Record<SettingsView, number> = { closed: 0, settings: 1, about: 2, receipts: 2, currency: 2, receipt: 3 };
+const titles: Record<SettingsView, string> = { closed: "Settings", settings: "Settings", about: "About", receipts: "Receipts", receipt: "Receipt", currency: "Currency" };
+const backLabels: Record<SettingsView, string> = { closed: "Back", settings: "Back", about: "Settings", receipts: "Settings", receipt: "Receipts", currency: "Settings" };
+const currencyOptions: { code: CurrencyCode; label: string }[] = [
+  { code: "PHP", label: "Philippine peso (PHP)" },
+  { code: "VND", label: "Vietnamese đồng (VND)" },
+  { code: "USD", label: "US dollar (USD)" },
+];
 const chevron = <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>;
 const rowClass = "settings-row flex min-h-[58px] w-full items-center justify-between border-b border-[#e1e8df] bg-transparent px-1 text-left text-[.98rem] text-[#344a39] hover:bg-[#edf3ea]";
 
@@ -58,13 +67,14 @@ function animateOut(element: HTMLElement | null, direction: "forward" | "back", 
   };
 }
 
-export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onOpenReceipts, onOpenReceipt, onDeleteReceipt, onClose, onHomeEnter }: SettingsPageProps) {
+export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurrencyChange, onOpenCurrency, onOpenAbout, onOpenReceipts, onOpenReceipt, onDeleteReceipt, onClose, onHomeEnter }: SettingsPageProps) {
   const previousView = useRef(view);
   const pageRef = useRef<HTMLElement>(null);
   const settingsHomeRef = useRef<HTMLDivElement>(null);
   const aboutPageRef = useRef<HTMLDivElement>(null);
   const receiptsPageRef = useRef<HTMLDivElement>(null);
   const receiptPageRef = useRef<HTMLDivElement>(null);
+  const currencyPageRef = useRef<HTMLDivElement>(null);
 
   // Read refs when called, not at render, so the element is always the current one.
   function screenElement(v: SettingsView): HTMLElement | null {
@@ -73,6 +83,7 @@ export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onO
       case "about": return aboutPageRef.current;
       case "receipts": return receiptsPageRef.current;
       case "receipt": return receiptPageRef.current;
+      case "currency": return currencyPageRef.current;
       default: return null;
     }
   }
@@ -94,7 +105,7 @@ export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onO
     } else {
       animateIn(screenElement(view), "back");
       // Return focus to the row that opened the screen we just left.
-      const opener = previous === "about" ? "open-about" : previous === "receipts" ? "open-receipts" : "close-settings";
+      const opener = previous === "about" ? "open-about" : previous === "receipts" ? "open-receipts" : previous === "currency" ? "open-currency" : "close-settings";
       document.getElementById(opener)?.focus();
     }
   }, [view, onHomeEnter]);
@@ -133,6 +144,13 @@ export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onO
         <h1 id="settings-title" className="mb-0 ml-1 mt-[30px] text-2xl font-bold text-ink">{titles[view]}</h1>
       </header>
       <div ref={settingsHomeRef} id="settings-home" className="mx-auto w-full max-w-[584px]" hidden={view !== "settings"}>
+        <button id="open-currency" className={rowClass} type="button" onClick={() => leaveForward(onOpenCurrency)}>
+          <span>Currency</span>
+          <span className="flex items-center gap-2">
+            <span id="currency-value" className="text-[.88rem] text-muted">{currency} ({currencySymbol(currencyFormatter(currency)) || currency})</span>
+            {chevron}
+          </span>
+        </button>
         <button id="open-receipts" className={rowClass} type="button" onClick={() => leaveForward(onOpenReceipts)}>
           <span>Receipts</span>
           <span className="flex items-center gap-2">
@@ -144,6 +162,27 @@ export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onO
           <span>About</span>
           {chevron}
         </button>
+      </div>
+      <div ref={currencyPageRef} id="currency-page" className="mx-auto w-full max-w-[584px] pt-2" hidden={view !== "currency"}>
+        <div role="radiogroup" aria-label="Currency">
+          {currencyOptions.map(({ code, label }) => (
+            <button
+              key={code}
+              id={`currency-option-${code}`}
+              className={rowClass}
+              type="button"
+              role="radio"
+              aria-checked={currency === code}
+              onClick={() => onCurrencyChange(code)}
+            >
+              <span>{label}</span>
+              {currency === code && (
+                <svg className="size-5 text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+              )}
+            </button>
+          ))}
+        </div>
+        <p id="currency-note" className="mx-1 mt-3 text-[.82rem] leading-[1.4] text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
       </div>
       <div ref={receiptsPageRef} id="receipts-page" className="mx-auto w-full max-w-[584px]" hidden={view !== "receipts"}>
         <ReceiptsList receipts={receipts} onOpen={(id) => leaveForward(() => onOpenReceipt(id))} />

@@ -38,6 +38,13 @@ describe("useGroceryList: derived values", () => {
     expect(result.current.visibleItems.map((i) => i.name)).toEqual(["Rice"]);
   });
 
+  it("gives a short budget status for the one-line row", () => {
+    expect(setup([rice, eggs], 150).result.current.budgetShortText).toContain("50.00 left");
+    expect(setup([rice, eggs], 50).result.current.budgetShortText).toContain("50.00 over");
+    expect(setup([rice, eggs], 100).result.current.budgetShortText).toBe("On budget");
+    expect(setup([rice, eggs], null).result.current.budgetShortText).toBe("");
+  });
+
   it("reports over budget once the cart passes the budget", () => {
     expect(setup([rice, eggs], 150).result.current.overBudget).toBe(false);
     expect(setup([rice, eggs], 50).result.current.overBudget).toBe(true);
@@ -55,9 +62,11 @@ describe("useGroceryList: items", () => {
     expect(result.current.items.find((i) => i.id === "2")?.qty).toBe(6);
   });
 
-  it("'start a new trip' unchecks everything", () => {
+  it("'mark all in cart' can check and uncheck everything", () => {
     const { result } = setup();
-    act(() => result.current.startNewTrip());
+    act(() => result.current.checkAll(true));
+    expect(result.current.doneCount).toBe(2);
+    act(() => result.current.checkAll(false));
     expect(result.current.doneCount).toBe(0);
   });
 });

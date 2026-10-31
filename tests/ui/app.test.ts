@@ -2,9 +2,8 @@ import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item, Receipt } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
-import { mountApp } from "../helpers/mountApp";
 import { version } from "../../package.json";
-
+import { mountApp } from "../helpers/mountApp";
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
 beforeAll(() => {
@@ -61,7 +60,7 @@ describe("grocery app", () => {
     click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
     expect(q("#cart-card strong").textContent).toContain("100.00");
     expect(q(".totals .total-card:nth-child(2) strong").textContent).toContain("130.00");
-    expect(q("#item-count").textContent).toBe("1 / 2");
+    expect(q("#cart-tab").textContent).toContain("In cart 1");
   });
 
   it("filters items into Still needed and In cart tabs as their checked state changes", () => {
@@ -135,16 +134,22 @@ describe("grocery app", () => {
     expect(q("#list").textContent).not.toContain("Rice");
   });
 
-  it("collapses the title and description while retaining the spending summary", () => {
+  it("shows just the title, settings button and spending totals in the header", () => {
     const { q } = setup([rice]);
-    const toggle = q<HTMLButtonElement>("#collapse-header");
-    act(() => toggle.click());
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("true");
-    expect(q<HTMLElement>(".totals").hidden).toBe(false);
+    expect(q("header h1").textContent).toBe("Grocery list");
+    expect(q("#open-settings")).not.toBeNull();
+    expect(q("#collapse-header")).toBeNull();
     expect(q("#cart-card strong").textContent).toContain("0.00");
-    act(() => toggle.click());
-    expect(q<HTMLElement>("#hero-title").getAttribute("aria-hidden")).toBe("false");
+    expect(q(".totals .total-card:nth-child(2) strong").textContent).toContain("100.00");
+  });
+
+  it("has no pinned 'Start a new trip' footer, and 'Mark all in cart' resets the list", () => {
+    const { q, click } = setup([{ ...rice, checked: true }, { ...eggs, checked: true }]);
+    expect(q("footer")).toBeNull();
+    expect(q("#uncheck")).toBeNull();
+    click<HTMLInputElement>("#check-all"); // all are checked, so this unchecks everything
+    expect(q("#needed-tab").textContent).toContain("Still needed 2");
+    expect(q("#cart-tab").textContent).toContain("In cart 0");
   });
 
   it("opens the settings list, shows the app version on About, and returns", () => {
@@ -158,7 +163,7 @@ describe("grocery app", () => {
     expect(q("#settings-title").textContent).toBe("About");
     expect(q("#about-page").textContent).toContain(`v${version}`);
     expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
-    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`,);
+    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`);
     click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
     expect(q("#settings-title").textContent).toBe("Settings");
@@ -225,7 +230,7 @@ describe("grocery app", () => {
 
   it("finishes a trip from the In cart tab, then shows the receipt in Settings", () => {
     const { q, click, storage } = setup([{ ...rice, checked: true }, eggs], 150);
-    expect(q<HTMLElement>("#finish-trip").hidden).toBe(true); // only on the In cart tab
+    expect(document.querySelector("#finish-trip")).toBeNull(); // only rendered on the In cart tab
     click<HTMLButtonElement>("#cart-tab");
     expect(q<HTMLElement>("#finish-trip").hidden).toBe(false);
     expect(q("#finish-trip").textContent).toContain("100.00");
@@ -292,5 +297,59 @@ describe("grocery app", () => {
     expect(storage.saveReceipts).toHaveBeenLastCalledWith([]);
     expect(q("#settings-title").textContent).toBe("Receipts");
     expect(q("#receipts-empty")).not.toBeNull();
+  });
+
+  it("edits the budget in a bottom sheet opened from the budget row, and can clear it", () => {
+    const { q, click, submit, storage } = setup([{ ...rice, checked: true }], 500);
+    expect(q("#budget-row").textContent).toContain("500.00");
+    expect(q("#budget-status").textContent).toContain("400.00 left");
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
+
+    click<HTMLButtonElement>("#budget-row");
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
+    expect(q<HTMLInputElement>("#budget-input").value).toBe("500");
+    q<HTMLInputElement>("#budget-input").value = "300";
+    submit("#budget-form");
+    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(300);
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
+    expect(q("#budget-status").textContent).toContain("200.00 left");
+
+    click<HTMLButtonElement>("#budget-row");
+    expect(q<HTMLInputElement>("#budget-input").value).toBe("300"); // reopened with the saved value
+    click<HTMLButtonElement>("#clear-budget");
+    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(null);
+    expect(q("#budget-row").textContent).toContain("Set a daily budget");
+    expect(q("#clear-budget")).toBeNull();
+  });
+
+  it("keeps the budget sheet open on an invalid amount and closes it with Esc without saving", () => {
+    const { q, click, submit, storage } = setup([], 100);
+    click<HTMLButtonElement>("#budget-row");
+    q<HTMLInputElement>("#budget-input").value = "-5";
+    submit("#budget-form");
+    expect(storage.saveDailyBudget).not.toHaveBeenCalled();
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
+    expect(q("#budget-preview").textContent).toContain("valid amount");
+
+    act(() => { q("#budget-sheet").dispatchEvent(new Event("cancel", { cancelable: true })); });
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
+    expect(storage.saveDailyBudget).not.toHaveBeenCalled();
+  });
+
+  it("previews the remaining budget while typing in the sheet", () => {
+    const { q, click } = setup([{ ...rice, checked: true }], 500);
+    click<HTMLButtonElement>("#budget-row");
+    const input = q<HTMLInputElement>("#budget-input");
+    act(() => {
+      input.value = "80";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(q("#budget-preview").textContent).toContain("20.00 over");
+  });
+
+  it("turns the budget row orange when over budget", () => {
+    const { q } = setup([{ ...rice, checked: true }], 80);
+    expect(q("#budget-row").className).toContain("bg-[#fff0e8]");
+    expect(q("#budget-status").textContent).toContain("20.00 over");
   });
 });
