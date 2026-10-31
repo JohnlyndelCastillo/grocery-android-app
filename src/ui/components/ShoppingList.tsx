@@ -50,7 +50,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
           {doneCount} / {allItems.length}
         </span>
       </div>
-      <div className="sticky top-0 z-10 bg-app pb-2 pt-1">
+      <div className="sticky top-[var(--bar-h)] z-10 bg-app pb-2 pt-1">
       <div className={`list-tabs relative isolate flex gap-[6px] rounded-xl bg-[var(--color-tabs-surface)] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
         <button id="needed-tab" className="list-tab relative z-[1] min-h-[2.375rem] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
           Still needed <span className="ml-[3px] inline-block min-w-[18px] rounded-[10px] bg-[var(--color-tabs-surface)] px-[5px] py-[2px] text-center text-[.68rem]">{neededCount}</span>

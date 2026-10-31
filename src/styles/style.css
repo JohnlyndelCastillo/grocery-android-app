@@ -67,6 +67,8 @@
   --color-hero-shadow: #1d583622;
   --color-button-shadow: #246b4525;
   --color-black-20: #0003;
+  --gutter: clamp(.8125rem, 4.5vw, 1.125rem); /* keep in sync with the #app padding below */
+  --bar-h: calc(3.75rem + env(safe-area-inset-top, 0px));
   --color-toast: #20352a;
   --color-green-fill: #246b45;
   --color-green-fill-hover: #174d32;
@@ -140,7 +142,6 @@ body { min-width: 320px; background: var(--color-app); }
 #new-name.invalid:focus { border-color: var(--color-danger); box-shadow: 0 0 0 3px var(--color-danger-ring-strong); }
 
 .hero {
-  margin: 0 clamp(-1.125rem, -4.5vw, -.8125rem);
   background: linear-gradient(145deg, var(--color-hero-start) 0%, var(--color-hero-end) 100%);
 }
 .hero::after {
@@ -211,7 +212,7 @@ dialog::backdrop { background: var(--color-backdrop); backdrop-filter: blur(.125
 
 @media (max-width: 380px) {
   #app { padding-right: .8125rem; padding-left: .8125rem; }
-  .hero { margin-right: -.8125rem; margin-left: -.8125rem; }
+  :root { --gutter: .8125rem; }
   .item-title-row { gap: .4375rem; }
   .item-details-row { gap: .3125rem; padding-left: 1.8125rem; }
   #add-form button { padding-right: .6875rem; padding-left: .6875rem; }
