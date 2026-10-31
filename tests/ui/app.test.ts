@@ -3,6 +3,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import type { Item, Receipt } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
 import { mountApp } from "../helpers/mountApp";
+import { version } from "../../package.json";
+
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
 beforeAll(() => {
@@ -154,9 +156,9 @@ describe("grocery app", () => {
     expect(q("#settings-home a")).toBeNull();
     click<HTMLButtonElement>("#open-about");
     expect(q("#settings-title").textContent).toBe("About");
-    expect(q("#about-page").textContent).toContain("v1.1.1");
+    expect(q("#about-page").textContent).toContain(`v${version}`);
     expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
-    expect(q<HTMLAnchorElement>("#about-page a").href).toBe("https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v1.1.1");
+    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`,);
     click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
     expect(q("#settings-title").textContent).toBe("Settings");

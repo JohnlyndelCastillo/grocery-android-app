@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { version } from "../../../package.json";
 import type { Receipt } from "../../domain/types";
 import type { SettingsView } from "../types";
 import { ReceiptDetail } from "./ReceiptDetail";
@@ -17,6 +18,7 @@ interface SettingsPageProps {
 }
 
 // How deep each screen is. Going deeper slides forward, going shallower slides back.
+const releaseUrl = `https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`;
 const depth: Record<SettingsView, number> = { closed: 0, settings: 1, about: 2, receipts: 2, receipt: 3 };
 const titles: Record<SettingsView, string> = { closed: "Settings", settings: "Settings", about: "About", receipts: "Receipts", receipt: "Receipt" };
 const backLabels: Record<SettingsView, string> = { closed: "Back", settings: "Back", about: "Settings", receipts: "Settings", receipt: "Receipts" };
@@ -152,9 +154,9 @@ export function SettingsPage({ view, receipts, selectedReceipt, onOpenAbout, onO
       <div ref={aboutPageRef} id="about-page" className="about-page mx-auto w-full max-w-[584px] pt-6" hidden={view !== "about"}>
         <div className="version-row flex items-center justify-between px-[2px] py-[14px] text-[.95rem] text-[#344a39]">
           <span>Version</span>
-          <strong className="text-[.9rem] font-semibold text-[#6d7a70]">v1.1.1</strong>
+          <strong className="text-[.9rem] font-semibold text-[#6d7a70]">v{version}</strong>
         </div>
-        <a className="settings-row flex min-h-[58px] w-full items-center justify-between border-b border-[#e1e8df] bg-transparent px-1 text-left text-[.98rem] text-[#344a39] no-underline hover:bg-[#edf3ea]" href="https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v1.1.1" target="_blank" rel="noopener noreferrer">
+        <a className="settings-row flex min-h-[58px] w-full items-center justify-between border-b border-[#e1e8df] bg-transparent px-1 text-left text-[.98rem] text-[#344a39] no-underline hover:bg-[#edf3ea]" href={releaseUrl} target="_blank" rel="noopener noreferrer">
           <span>What’s new</span>
           <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
         </a>
