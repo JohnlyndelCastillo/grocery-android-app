@@ -5,6 +5,7 @@ import { currencyFormatter, currencySymbol } from "../format";
 import type { SettingsView } from "../types";
 import { ReceiptDetail } from "./ReceiptDetail";
 import { ReceiptsList } from "./ReceiptsList";
+import { SettingsGroup, SettingsRow } from "./SettingsGroup";
 
 interface SettingsPageProps {
   view: SettingsView;
@@ -32,7 +33,6 @@ const currencyOptions: { code: CurrencyCode; label: string }[] = [
   { code: "USD", label: "US dollar (USD)" },
 ];
 const chevron = <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>;
-const rowClass = "settings-row flex min-h-[58px] w-full items-center justify-between border-b border-[#e1e8df] bg-transparent px-1 text-left text-[.98rem] text-[#344a39] hover:bg-[#edf3ea]";
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -143,44 +143,39 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
         </button>
         <h1 id="settings-title" className="mb-0 ml-1 mt-[30px] text-2xl font-bold text-ink">{titles[view]}</h1>
       </header>
-      <div ref={settingsHomeRef} id="settings-home" className="mx-auto w-full max-w-[584px]" hidden={view !== "settings"}>
-        <button id="open-currency" className={rowClass} type="button" onClick={() => leaveForward(onOpenCurrency)}>
-          <span>Currency</span>
-          <span className="flex items-center gap-2">
-            <span id="currency-value" className="text-[.88rem] text-muted">{currency} ({currencySymbol(currencyFormatter(currency)) || currency})</span>
-            {chevron}
-          </span>
-        </button>
-        <button id="open-receipts" className={rowClass} type="button" onClick={() => leaveForward(onOpenReceipts)}>
-          <span>Receipts</span>
-          <span className="flex items-center gap-2">
-            {receipts.length > 0 && <span id="receipts-count" className="text-[.8rem] text-muted">{receipts.length}</span>}
-            {chevron}
-          </span>
-        </button>
-        <button id="open-about" className={rowClass} type="button" onClick={() => leaveForward(onOpenAbout)}>
-          <span>About</span>
-          {chevron}
-        </button>
+      <div ref={settingsHomeRef} id="settings-home" className="mx-auto w-full max-w-[584px] pt-5" hidden={view !== "settings"}>
+        <SettingsGroup>
+          <SettingsRow id="open-receipts" onClick={() => leaveForward(onOpenReceipts)}>
+            <span>Receipts</span>
+            <span className="flex items-center gap-2">
+              {receipts.length > 0 && <span id="receipts-count" className="text-[.8rem] text-muted">{receipts.length}</span>}
+              {chevron}
+            </span>
+          </SettingsRow>
+          <SettingsRow id="open-currency" onClick={() => leaveForward(onOpenCurrency)}>
+            <span>Currency</span>
+            <span className="flex items-center gap-2">
+              <span id="currency-value" className="text-[.88rem] text-muted">{currency} ({currencySymbol(currencyFormatter(currency)) || currency})</span>
+              {chevron}
+            </span>
+          </SettingsRow>
+          <SettingsRow id="open-about" onClick={() => leaveForward(onOpenAbout)}>
+            <span>About</span>{chevron}
+          </SettingsRow>
+        </SettingsGroup>
       </div>
-      <div ref={currencyPageRef} id="currency-page" className="mx-auto w-full max-w-[584px] pt-2" hidden={view !== "currency"}>
+      <div ref={currencyPageRef} id="currency-page" className="mx-auto w-full max-w-[584px] pt-5" hidden={view !== "currency"}>
         <div role="radiogroup" aria-label="Currency">
-          {currencyOptions.map(({ code, label }) => (
-            <button
-              key={code}
-              id={`currency-option-${code}`}
-              className={rowClass}
-              type="button"
-              role="radio"
-              aria-checked={currency === code}
-              onClick={() => onCurrencyChange(code)}
-            >
-              <span>{label}</span>
-              {currency === code && (
-                <svg className="size-5 text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-              )}
-            </button>
-          ))}
+          <SettingsGroup>
+            {currencyOptions.map(({ code, label }) => (
+              <SettingsRow key={code} id={`currency-option-${code}`} role="radio" checked={currency === code} onClick={() => onCurrencyChange(code)}>
+                <span>{label}</span>
+                {currency === code && (
+                  <svg className="size-5 text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                )}
+              </SettingsRow>
+            ))}
+          </SettingsGroup>
         </div>
         <p id="currency-note" className="mx-1 mt-3 text-[.82rem] leading-[1.4] text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
       </div>
@@ -190,15 +185,17 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
       <div ref={receiptPageRef} id="receipt-page" className="mx-auto w-full max-w-[584px]" hidden={view !== "receipt"}>
         <ReceiptDetail receipt={selectedReceipt} onDelete={onDeleteReceipt} />
       </div>
-      <div ref={aboutPageRef} id="about-page" className="about-page mx-auto w-full max-w-[584px] pt-6" hidden={view !== "about"}>
-        <div className="version-row flex items-center justify-between px-[2px] py-[14px] text-[.95rem] text-[#344a39]">
-          <span>Version</span>
-          <strong className="text-[.9rem] font-semibold text-[#6d7a70]">v{version}</strong>
-        </div>
-        <a className="settings-row flex min-h-[58px] w-full items-center justify-between border-b border-[#e1e8df] bg-transparent px-1 text-left text-[.98rem] text-[#344a39] no-underline hover:bg-[#edf3ea]" href={releaseUrl} target="_blank" rel="noopener noreferrer">
-          <span>What’s new</span>
-          <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
-        </a>
+      <div ref={aboutPageRef} id="about-page" className="about-page mx-auto w-full max-w-[584px] pt-5" hidden={view !== "about"}>
+        <SettingsGroup>
+          <SettingsRow>
+            <span>Version</span>
+            <strong className="text-[.9rem] font-semibold text-[#6d7a70]">v{version}</strong>
+          </SettingsRow>
+          <SettingsRow href={releaseUrl}>
+            <span>What’s new</span>
+            <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+          </SettingsRow>
+        </SettingsGroup>
       </div>
     </section>
   );

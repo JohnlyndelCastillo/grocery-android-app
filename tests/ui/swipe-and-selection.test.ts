@@ -59,6 +59,26 @@ describe("swipe", () => {
     expect(isSwiped(li)).toBe(false);
   });
 
+  it("a right swipe closes an open delete action without checking the item", () => {
+    const { q } = setup([rice]);
+    const li = q<HTMLLIElement>("#list li");
+    swipe(li, 220, 140);
+    expect(isSwiped(li)).toBe(true);
+    swipe(li, 140, 220);
+    expect(isSwiped(li)).toBe(false);
+    expect(q<HTMLInputElement>('.item-check[aria-label="Mark Rice as in cart"]').checked).toBe(false);
+    expect(q("#cart-tab").getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("a right swipe checks a row when no delete action is open", () => {
+    const { q } = setup([rice]);
+    const li = q<HTMLLIElement>("#list li");
+    swipe(li, 120, 200);
+    expect(q<HTMLInputElement>('.item-check[aria-label="Mark Rice as not in cart"]').checked).toBe(true);
+    expect(q("#cart-tab").getAttribute("aria-selected")).toBe("false");
+    expect(q("#list").textContent).not.toContain("Rice");
+  });
+
   it("only one row is open at a time", () => {
     const { qa } = setup([rice, eggs]);
     const [first, second] = qa<HTMLLIElement>("#list li");
