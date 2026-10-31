@@ -36,7 +36,7 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
           if (event.currentTarget.value.trim()) setInvalid(false);
         }}
       />
-      <button className="min-h-12 shrink-0 whitespace-nowrap rounded-xl bg-green px-[15px] font-bold text-white shadow-[0_4px_10px_var(--color-button-shadow)] hover:bg-green-dark max-[380px]:px-[11px]" type="submit">
+      <button className="min-h-12 shrink-0 whitespace-nowrap rounded-xl bg-green-fill px-[15px] font-bold text-white shadow-[0_4px_10px_var(--color-button-shadow)] hover:bg-green-fill-hover max-[380px]:px-[11px]" type="submit">
         <span className="mr-[2px] align-[-1px] text-[1.15rem]" aria-hidden="true">＋</span> Add item
       </button>
     </form>

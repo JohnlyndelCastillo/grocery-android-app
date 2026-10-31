@@ -67,6 +67,9 @@
   --color-hero-shadow: #1d583622;
   --color-button-shadow: #246b4525;
   --color-black-20: #0003;
+  --color-toast: #20352a;
+  --color-green-fill: #246b45;
+  --color-green-fill-hover: #174d32;
 }
 
 :root {
@@ -185,7 +188,7 @@ li input[type="checkbox"] {
 }
 li input[type="checkbox"].select-item { border-color: var(--color-selection-border); }
 li input[type="checkbox"].select-item:checked { border-color: var(--color-selection); background: var(--color-selection); }
-li input[type="checkbox"]:checked:not(.select-item) { border-color: var(--green); background: var(--green); }
+li input[type="checkbox"]:checked:not(.select-item) { border-color: var(--color-green-fill); background: var(--color-green-fill); }
 li input[type="checkbox"]:checked::after {
   display: block;
   color: var(--color-checkmark);
@@ -350,5 +353,8 @@ dialog::backdrop { background: var(--color-backdrop); backdrop-filter: blur(.125
     --color-over-budget-accent: #ffc3aa;
     --color-hero-muted: #d4e8d8;
     --color-dialog-button: #2d3e31;
+    --color-toast: #34473a;
+    --color-green-fill: #2f7a50;
+    --color-green-fill-hover: #265f3f;
   }
 }

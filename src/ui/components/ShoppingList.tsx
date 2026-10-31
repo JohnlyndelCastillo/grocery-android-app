@@ -33,6 +33,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
   const selectAllRef = useRef<HTMLInputElement>(null);
   const neededCount = allItems.filter((item) => !item.checked).length;
   const selectedVisibleCount = visibleItems.filter((item) => selectedIds.has(item.id)).length;
+  const progress = allItems.length > 0 ? (doneCount / allItems.length) * 100 : 0;
 
   useEffect(() => {
     if (checkAllRef.current) checkAllRef.current.indeterminate = doneCount > 0 && doneCount < allItems.length;
@@ -41,6 +42,14 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
 
   return (
     <section className="list-section" aria-label="Your list">
+      <div className="mb-2 flex items-center gap-3">
+        <div className="progress-track h-[5px] flex-1 overflow-hidden rounded-[9px] bg-[var(--color-tabs-surface)]" role="progressbar" aria-label="Shopping progress" aria-valuemin={0} aria-valuemax={allItems.length} aria-valuenow={doneCount}>
+          <span className="block h-full rounded-[inherit] bg-[var(--color-focus)] transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+        </div>
+        <span id="item-count" className="shrink-0 rounded-[20px] bg-[var(--color-selection-hover)] px-[10px] py-[5px] text-[.73rem] font-bold text-green" aria-label={`${doneCount} of ${allItems.length} items in cart`}>
+          {doneCount} / {allItems.length}
+        </span>
+      </div>
       <div className="sticky top-0 z-10 bg-app pb-2 pt-1">
       <div className={`list-tabs relative isolate flex gap-[6px] rounded-xl bg-[var(--color-tabs-surface)] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
         <button id="needed-tab" className="list-tab relative z-[1] min-h-[2.375rem] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
@@ -98,7 +107,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
       {activeTab === "cart" && (
         <button
             id="finish-trip"
-            className="mt-3 block min-h-[2.875rem] w-full rounded-xl bg-green font-bold text-white disabled:cursor-default disabled:opacity-45"
+            className="mt-3 block min-h-[2.875rem] w-full rounded-xl bg-green-fill font-bold text-white disabled:cursor-default disabled:opacity-45"
             type="button"
             disabled={doneCount === 0}
             onClick={onFinishTrip}

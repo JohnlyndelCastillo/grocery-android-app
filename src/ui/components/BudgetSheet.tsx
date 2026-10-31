@@ -87,7 +87,7 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
           />
         </div>
         <p id="budget-preview" className={`mb-[18px] mt-2 min-h-[1.2em] text-[.82rem] font-semibold ${invalid ? "text-[var(--color-budget-warning)]" : "text-green"}`} aria-live="polite">{preview}</p>
-        <button className="block min-h-[3.125rem] w-full rounded-xl bg-green font-bold text-white" type="submit">Save</button>
+        <button className="block min-h-[3.125rem] w-full rounded-xl bg-green-fill font-bold text-white" type="submit">Save</button>
         {budget !== null && (
           <button
             id="clear-budget"

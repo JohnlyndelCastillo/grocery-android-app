@@ -63,6 +63,37 @@ describe("grocery app", () => {
     expect(q("#cart-tab").textContent).toContain("In cart 1");
   });
 
+  it("shows the progress bar and count pill, and updates them as items are checked", () => {
+    const { q, click } = setup([rice, eggs]);
+    const bar = () => q<HTMLElement>("[role=progressbar]");
+    expect(q("#item-count").textContent).toBe("0 / 2");
+    expect(bar().getAttribute("aria-valuenow")).toBe("0");
+    expect(bar().getAttribute("aria-valuemax")).toBe("2");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 0%");
+
+    click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
+    expect(q("#item-count").textContent).toBe("1 / 2");
+    expect(q("#item-count").getAttribute("aria-label")).toBe("1 of 2 items in cart");
+    expect(bar().getAttribute("aria-valuenow")).toBe("1");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 50%");
+
+    click<HTMLInputElement>("#check-all");
+    expect(q("#item-count").textContent).toBe("2 / 2");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 100%");
+  });
+
+  it("keeps the progress bar and count pill on both tabs and with an empty list", () => {
+    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
+    click<HTMLButtonElement>("#cart-tab");
+    expect(q("#item-count").textContent).toBe("1 / 2");
+    click<HTMLButtonElement>("#needed-tab");
+    expect(q("#item-count").textContent).toBe("1 / 2");
+
+    const empty = setup();
+    expect(empty.q("#item-count").textContent).toBe("0 / 0");
+    expect(empty.q("[role=progressbar]").firstElementChild!.getAttribute("style")).toContain("width: 0%");
+  });
+
   it("filters items into Still needed and In cart tabs as their checked state changes", () => {
     const { q, click } = setup([rice, eggs]);
     expect(q("#needed-tab").textContent).toContain("Still needed 2");
