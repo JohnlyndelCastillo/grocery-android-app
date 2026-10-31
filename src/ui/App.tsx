@@ -11,6 +11,7 @@ import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
 import { useCompactHeader } from "./hooks/useCompactHeader";
 import { useGroceryList } from "./hooks/useGroceryList";
+import { lightTap, successTap } from "./haptics";
 import { parentView, type SettingsView } from "./types";
 
 interface AppProps {
@@ -78,13 +79,19 @@ export function App({ storage }: AppProps) {
             onSelectAll={list.selectAllVisible}
             onToggleSelection={list.toggleSelectionMode}
             onDeleteSelected={list.requestDeleteSelected}
-            onChecked={list.setChecked}
+            onChecked={(id, checked) => {
+              list.setChecked(id, checked);
+              if (checked) void lightTap();
+            }}
             onSelected={list.changeSelection}
             onQty={list.setQty}
             onPrice={list.setPrice}
             onQuickDelete={list.quickDelete}
             onSwipeDelete={list.requestDeleteOne}
-            onFinishTrip={list.finishTrip}
+            onFinishTrip={() => {
+              list.finishTrip();
+              void successTap();
+            }}
           />
         </main>
       </div>
