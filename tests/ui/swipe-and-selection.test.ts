@@ -71,10 +71,15 @@ describe("swipe", () => {
   });
 
   it("a right swipe checks a row when no delete action is open", () => {
-    const { q } = setup([rice]);
+    const { q, storage } = setup([rice]);
     const li = q<HTMLLIElement>("#list li");
     swipe(li, 120, 200);
-    expect(q<HTMLInputElement>('.item-check[aria-label="Mark Rice as not in cart"]').checked).toBe(true);
+
+    // Checking the row moves it out of the active "Still needed" list immediately,
+    // so assert the saved item state rather than querying a checkbox that no longer exists.
+    expect(storage.saveItems).toHaveBeenLastCalledWith([
+      expect.objectContaining({ id: "1", checked: true }),
+    ]);
     expect(q("#cart-tab").getAttribute("aria-selected")).toBe("false");
     expect(q("#list").textContent).not.toContain("Rice");
   });
