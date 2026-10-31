@@ -10,7 +10,7 @@ interface ReceiptsListProps {
 export function ReceiptsList({ receipts, onOpen }: ReceiptsListProps) {
   if (receipts.length === 0) {
     return (
-      <p id="receipts-empty" className="mt-6 rounded-[15px] border border-dashed border-[#cbd8c9] px-4 py-6 text-center text-[.88rem] text-[#718073]">
+      <p id="receipts-empty" className="mt-6 rounded-[15px] border border-dashed border-[var(--color-empty-border)] px-4 py-6 text-center text-[.88rem] text-[var(--color-empty-muted)]">
         No receipts yet. Tap “Finish trip” in your cart to save one.
       </p>
     );
@@ -23,11 +23,11 @@ export function ReceiptsList({ receipts, onOpen }: ReceiptsListProps) {
           return (
             <li key={receipt.id}>
               <SettingsRow
-                className="receipt-row min-h-[64px] gap-3"
+                className="receipt-row min-h-[4rem] gap-3"
                 onClick={() => onOpen(receipt.id)}
               >
                 <span className="min-w-0">
-                  <span className="block text-[.95rem] text-[#344a39]">{formatReceiptDate(receipt.finishedAt)}</span>
+                  <span className="block text-[.95rem] text-[var(--color-settings-ink)]">{formatReceiptDate(receipt.finishedAt)}</span>
                   <span className="block text-[.78rem] text-muted">{count} {count === 1 ? "item" : "items"}</span>
                 </span>
                 <strong className="whitespace-nowrap text-[.95rem] text-green-dark">{currencyFormatter(receipt.currency).format(receipt.total)}</strong>

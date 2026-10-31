@@ -32,7 +32,7 @@ export function DeleteDialog({ open, message, title = "Delete selected items?", 
     <dialog
       ref={dialogRef}
       id={`${idPrefix}confirm-delete-dialog`}
-      className="m-auto w-[min(calc(100%-36px),400px)] rounded-[18px] border-0 p-0 text-ink shadow-[0_18px_60px_#10271940]"
+      className="m-auto w-[min(calc(100%-36px),400px)] rounded-[18px] border-0 p-0 text-ink shadow-[0_18px_60px_var(--color-dialog-shadow)]"
       aria-labelledby={`${idPrefix}delete-dialog-title`}
       aria-describedby={`${idPrefix}delete-confirm-message`}
       onCancel={(event) => {
@@ -45,8 +45,8 @@ export function DeleteDialog({ open, message, title = "Delete selected items?", 
         <h2 id={`${idPrefix}delete-dialog-title`} className="mb-2 mt-0 text-[1.15rem] font-bold">{title}</h2>
         <p id={`${idPrefix}delete-confirm-message`} className="m-0 text-[.9rem] leading-[1.5] text-muted">{message}</p>
         <div className="mt-[22px] flex justify-end gap-[9px]">
-          <button id={`${idPrefix}cancel-delete`} className="min-h-[42px] rounded-xl bg-[#edf2eb] px-[14px] text-[.85rem] font-bold text-[#385541]" type="button" onClick={onCancel}>Cancel</button>
-          <button id={`${idPrefix}confirm-delete`} className="min-h-[42px] rounded-xl bg-[#ad5147] px-[14px] text-[.85rem] font-bold text-white" type="button" onClick={onConfirm}>{confirmLabel}</button>
+          <button id={`${idPrefix}cancel-delete`} className="min-h-[2.625rem] rounded-xl bg-[var(--color-dialog-button)] px-[14px] text-[.85rem] font-bold text-[var(--color-selection-ink)]" type="button" onClick={onCancel}>Cancel</button>
+          <button id={`${idPrefix}confirm-delete`} className="min-h-[2.625rem] rounded-xl bg-[var(--color-danger-fill)] px-[14px] text-[.85rem] font-bold text-white" type="button" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </dialog>
