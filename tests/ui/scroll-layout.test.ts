@@ -61,12 +61,32 @@ describe("page scrolling", () => {
     expect(sticky).not.toBeNull();
     expect(sticky.contains(q("#cart-tab"))).toBe(true);
     expect(q("#home-page main").contains(sticky)).toBe(true);
-    expect(sticky.className).toContain("top-0");
+    expect(sticky.className).toContain("top-[var(--bar-h)]"); // sits just under the compact bar
     expect(sticky.className).toContain("bg-app"); // opaque, so rows scrolling underneath don't show through
   });
 });
 
 describe("collapsing header", () => {
+  it("lives inside the scrolling page, with a sticky bar that never changes size", () => {
+    const { q } = setup();
+    const main = q<HTMLElement>("#home-page main");
+    const bar = q<HTMLElement>("#app-bar");
+    expect(main.contains(bar)).toBe(true);
+    expect(main.contains(q("#app-header"))).toBe(true);
+    expect(bar.className).toContain("sticky");
+    expect(bar.className).toContain("top-0");
+    expect(bar.className).toContain("h-[var(--bar-h)]");
+    expect(bar.contains(q("#open-settings"))).toBe(true);
+  });
+
+  it("only animates opacity, never layout properties like padding, font-size or height", () => {
+    // Animating layout made the collapse stutter on phones, so keep it to opacity.
+    const { q } = setup();
+    const html = q("#app-bar").outerHTML + q("#app-header").outerHTML;
+    expect(html).not.toMatch(/transition-\[[^\]]*(padding|font-size|grid-template-rows|margin|height|border-radius)/);
+    expect(html).toContain("transition-opacity");
+  });
+
   it("compacts once the page is scrolled and expands again at the top", () => {
     const { q, scrollTo } = setup();
     const header = q<HTMLElement>("#app-header");

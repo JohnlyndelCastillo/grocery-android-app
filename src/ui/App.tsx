@@ -9,7 +9,6 @@ import { NoticeBanner } from "./components/NoticeBanner";
 import { SettingsPage } from "./components/SettingsPage";
 import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
-import { useCompactHeader } from "./hooks/useCompactHeader";
 import { useGroceryList } from "./hooks/useGroceryList";
 import { lightTap, successTap } from "./haptics";
 import { parentView, type SettingsView } from "./types";
@@ -27,10 +26,6 @@ export function App({ storage }: AppProps) {
   const selectedReceipt = list.receipts.find((r) => r.id === receiptId) ?? null;
   const homePageRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const totalsRef = useRef<HTMLDivElement>(null);
-  // Compacting the header gives back the total cards' height plus the extra padding and spacing around
-  // them (about 54px: 24 top padding + 16 bottom padding + 14 gap).
-  const compactHeader = useCompactHeader(mainRef, () => (totalsRef.current?.offsetHeight ?? 0) + 54);
 
   function animateHomePageIn() {
     const page = homePageRef.current;
@@ -48,51 +43,52 @@ export function App({ storage }: AppProps) {
   return (
     <>
       <div ref={homePageRef} id="home-page" className="flex h-full min-h-0 flex-col" hidden={settingsView !== "closed"}>
-        <Header
-          cartTotal={list.cartText}
-          plannedTotal={list.plannedText}
-          overBudget={list.overBudget}
-          compact={compactHeader}
-          totalsRef={totalsRef}
-          onOpenSettings={() => setSettingsView("settings")}
-        />
-        <main ref={mainRef} className="min-h-0 flex-1 scroll-pt-[60px] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] pt-[19px] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
-          <BudgetRow
-            budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
-            status={list.budgetShortText}
-            over={list.overBudget}
-            onOpen={() => setBudgetOpen(true)}
+        <main ref={mainRef} className="-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+3.5rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+          <Header
+            cartTotal={list.cartText}
+            plannedTotal={list.plannedText}
+            overBudget={list.overBudget}
+            scrollerRef={mainRef}
+            onOpenSettings={() => setSettingsView("settings")}
           />
-          <AddItemForm onAdd={list.addItem} />
-          <ShoppingList
-            allItems={list.items}
-            visibleItems={list.visibleItems}
-            activeTab={list.activeTab}
-            doneCount={list.doneCount}
-            selectedIds={list.selectedIds}
-            selectionMode={list.selectionMode}
-            money={list.money}
-            pricePlaceholder={list.currencyLabel}
-            cartText={list.cartText}
-            onTabChange={list.changeTab}
-            onCheckAll={list.checkAll}
-            onSelectAll={list.selectAllVisible}
-            onToggleSelection={list.toggleSelectionMode}
-            onDeleteSelected={list.requestDeleteSelected}
-            onChecked={(id, checked) => {
-              list.setChecked(id, checked);
-              if (checked) void lightTap();
-            }}
-            onSelected={list.changeSelection}
-            onQty={list.setQty}
-            onPrice={list.setPrice}
-            onQuickDelete={list.quickDelete}
-            onSwipeDelete={list.requestDeleteOne}
-            onFinishTrip={() => {
-              list.finishTrip();
-              void successTap();
-            }}
-          />
+          <div className="pt-[19px]">
+            <BudgetRow
+              budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
+              status={list.budgetShortText}
+              over={list.overBudget}
+              onOpen={() => setBudgetOpen(true)}
+            />
+            <AddItemForm onAdd={list.addItem} />
+            <ShoppingList
+              allItems={list.items}
+              visibleItems={list.visibleItems}
+              activeTab={list.activeTab}
+              doneCount={list.doneCount}
+              selectedIds={list.selectedIds}
+              selectionMode={list.selectionMode}
+              money={list.money}
+              pricePlaceholder={list.currencyLabel}
+              cartText={list.cartText}
+              onTabChange={list.changeTab}
+              onCheckAll={list.checkAll}
+              onSelectAll={list.selectAllVisible}
+              onToggleSelection={list.toggleSelectionMode}
+              onDeleteSelected={list.requestDeleteSelected}
+              onChecked={(id, checked) => {
+                list.setChecked(id, checked);
+                if (checked) void lightTap();
+              }}
+              onSelected={list.changeSelection}
+              onQty={list.setQty}
+              onPrice={list.setPrice}
+              onQuickDelete={list.quickDelete}
+              onSwipeDelete={list.requestDeleteOne}
+              onFinishTrip={() => {
+                list.finishTrip();
+                void successTap();
+              }}
+            />
+          </div>
         </main>
       </div>
 
