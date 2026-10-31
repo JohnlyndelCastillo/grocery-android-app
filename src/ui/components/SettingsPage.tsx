@@ -32,7 +32,7 @@ const currencyOptions: { code: CurrencyCode; label: string }[] = [
   { code: "VND", label: "Vietnamese đồng (VND)" },
   { code: "USD", label: "US dollar (USD)" },
 ];
-const chevron = <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>;
+const chevron = <svg className="size-5 text-[var(--color-icon-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -128,7 +128,7 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
       aria-labelledby="settings-title"
       hidden={view === "closed"}
     >
-      <header className="mx-auto flex w-full max-w-[584px] flex-col items-start border-b border-[#e1e8df] py-3 pb-4">
+      <header className="mx-auto flex w-full max-w-[584px] flex-col items-start border-b border-[var(--color-settings-border)] py-3 pb-4">
         <button
           id="close-settings"
           className="inline-flex items-center gap-1 rounded-lg bg-transparent py-[7px] pl-1 pr-[10px] text-[.85rem] font-bold text-green"
@@ -189,11 +189,11 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
         <SettingsGroup>
           <SettingsRow>
             <span>Version</span>
-            <strong className="text-[.9rem] font-semibold text-[#6d7a70]">v{version}</strong>
+            <strong className="text-[.9rem] font-semibold text-[var(--color-version-muted)]">v{version}</strong>
           </SettingsRow>
           <SettingsRow href={releaseUrl}>
             <span>What’s new</span>
-            <svg className="size-5 text-[#879489]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            <svg className="size-5 text-[var(--color-icon-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
           </SettingsRow>
         </SettingsGroup>
       </div>

@@ -52,7 +52,7 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
     <dialog
       ref={dialogRef}
       id="budget-sheet"
-      className="mx-auto mb-0 mt-auto w-full max-w-[620px] rounded-b-none rounded-t-3xl border-0 bg-app p-0 text-ink shadow-[0_-8px_40px_#10271940]"
+      className="mx-auto mb-0 mt-auto w-full max-w-[620px] rounded-b-none rounded-t-3xl border-0 bg-app p-0 text-ink shadow-[0_-8px_40px_var(--color-dialog-shadow)]"
       aria-labelledby="budget-sheet-title"
       onCancel={(event) => {
         event.preventDefault();
@@ -63,10 +63,10 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
       }}
     >
       <form id="budget-form" className="px-5 pb-[calc(24px+env(safe-area-inset-bottom,0px))] pt-[10px]" onSubmit={handleSubmit}>
-        <div className="mx-auto mb-[14px] h-[5px] w-10 rounded-[3px] bg-[#c9d3c8]" aria-hidden="true" />
+        <div className="mx-auto mb-[14px] h-[5px] w-10 rounded-[3px] bg-[var(--color-sheet-handle)]" aria-hidden="true" />
         <h2 id="budget-sheet-title" className="m-0 text-[1.25rem] font-bold">Today’s budget</h2>
         <p className="mb-4 mt-1 text-[.88rem] text-muted">Resets each day. Leave empty for no limit.</p>
-        <label className="mb-[6px] block text-[.8rem] font-bold text-[#3e5745]" htmlFor="budget-input">Spending limit</label>
+        <label className="mb-[6px] block text-[.8rem] font-bold text-[var(--color-sheet-label)]" htmlFor="budget-input">Spending limit</label>
         <div className="relative">
           <span className="absolute left-[14px] top-[14px] text-[.95rem] text-muted" aria-hidden="true">{symbol}</span>
           <input
@@ -83,15 +83,15 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
               setDraft(event.currentTarget.value);
               setError(false);
             }}
-            className="!h-[50px] w-full !pl-[30px]"
+            className="!h-[3.125rem] w-full !pl-[30px]"
           />
         </div>
-        <p id="budget-preview" className={`mb-[18px] mt-2 min-h-[1.2em] text-[.82rem] font-semibold ${invalid ? "text-[#a04e35]" : "text-green"}`} aria-live="polite">{preview}</p>
-        <button className="block min-h-[50px] w-full rounded-xl bg-green font-bold text-white" type="submit">Save</button>
+        <p id="budget-preview" className={`mb-[18px] mt-2 min-h-[1.2em] text-[.82rem] font-semibold ${invalid ? "text-[var(--color-budget-warning)]" : "text-green"}`} aria-live="polite">{preview}</p>
+        <button className="block min-h-[3.125rem] w-full rounded-xl bg-green font-bold text-white" type="submit">Save</button>
         {budget !== null && (
           <button
             id="clear-budget"
-            className="mt-[6px] block min-h-12 w-full bg-transparent font-bold text-[#a04e35]"
+            className="mt-[6px] block min-h-12 w-full bg-transparent font-bold text-[var(--color-budget-warning)]"
             type="button"
             onClick={() => {
               onSave("");

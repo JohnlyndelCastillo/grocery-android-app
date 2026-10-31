@@ -349,7 +349,9 @@ describe("grocery app", () => {
 
   it("turns the budget row orange when over budget", () => {
     const { q } = setup([{ ...rice, checked: true }], 80);
-    expect(q("#budget-row").className).toContain("bg-[#fff0e8]");
+    expect(q("#budget-row").className).toContain("bg-[var(--color-budget-surface)]");
+    expect(q("#budget-row").className).toContain("border-[var(--color-budget-border)]");
+    expect(q("#budget-row").className).toContain("text-[var(--color-budget-ink)]");
     expect(q("#budget-status").textContent).toContain("20.00 over");
   });
 });

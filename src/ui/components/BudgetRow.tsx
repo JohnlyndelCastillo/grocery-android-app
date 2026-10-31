@@ -16,7 +16,7 @@ export function BudgetRow({ budgetText, status, over, onOpen }: BudgetRowProps) 
   return (
     <button
       id="budget-row"
-      className={`mb-3 flex min-h-[52px] w-full items-center justify-between gap-3 rounded-[14px] border px-4 text-left ${over ? "border-[#f4c2ab] bg-[#fff0e8] text-[#923d27]" : "border-[#e2e9df] bg-white text-ink"}`}
+      className={`mb-3 flex min-h-[3.25rem] w-full items-center justify-between gap-3 rounded-[14px] border px-4 text-left ${over ? "border-[var(--color-budget-border)] bg-[var(--color-budget-surface)] text-[var(--color-budget-ink)]" : "border-[var(--color-budget-neutral-border)] bg-[var(--color-surface)] text-ink"}`}
       type="button"
       onClick={onOpen}
     >
