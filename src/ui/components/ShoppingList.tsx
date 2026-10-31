@@ -41,13 +41,15 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
 
   return (
     <section className="list-section" aria-label="Your list">
-      <div className={`list-tabs relative isolate mb-[6px] flex gap-[6px] rounded-xl bg-[#e9efe7] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
+      <div className="sticky top-0 z-10 bg-app pb-2 pt-1">
+      <div className={`list-tabs relative isolate flex gap-[6px] rounded-xl bg-[#e9efe7] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
         <button id="needed-tab" className="list-tab relative z-[1] min-h-[38px] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[#617064]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
           Still needed <span className="ml-[3px] inline-block min-w-[18px] rounded-[10px] bg-[#e9efe7] px-[5px] py-[2px] text-center text-[.68rem]">{neededCount}</span>
         </button>
         <button id="cart-tab" className="list-tab relative z-[1] min-h-[38px] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[#617064]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "cart"} tabIndex={activeTab === "cart" ? 0 : -1} onClick={() => onTabChange("cart")}>
           In cart <span className="ml-[3px] inline-block min-w-[18px] rounded-[10px] bg-[#e9efe7] px-[5px] py-[2px] text-center text-[.68rem]">{allItems.length - neededCount}</span>
         </button>
+      </div>
       </div>
 
       <div className="mb-[6px] flex items-center justify-between">
@@ -70,7 +72,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
         </button>
       </div>
 
-      <ul id="list" className={`m-0 list-none p-0 [overscroll-behavior:contain] [scrollbar-gutter:stable] ${activeTab === "cart" ? "max-h-[360px] overflow-y-auto" : ""}`}>
+      <ul id="list" className="m-0 list-none p-0">
         {visibleItems.map((item) => (
           <GroceryRow
             key={item.id}

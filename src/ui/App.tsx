@@ -9,6 +9,7 @@ import { NoticeBanner } from "./components/NoticeBanner";
 import { SettingsPage } from "./components/SettingsPage";
 import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
+import { useCompactHeader } from "./hooks/useCompactHeader";
 import { useGroceryList } from "./hooks/useGroceryList";
 import { parentView, type SettingsView } from "./types";
 
@@ -24,6 +25,11 @@ export function App({ storage }: AppProps) {
   const [confirmReceiptDelete, setConfirmReceiptDelete] = useState(false);
   const selectedReceipt = list.receipts.find((r) => r.id === receiptId) ?? null;
   const homePageRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const totalsRef = useRef<HTMLDivElement>(null);
+  // Compacting the header gives back the total cards' height plus the extra padding and spacing around
+  // them (about 54px: 24 top padding + 16 bottom padding + 14 gap).
+  const compactHeader = useCompactHeader(mainRef, () => (totalsRef.current?.offsetHeight ?? 0) + 54);
 
   function animateHomePageIn() {
     const page = homePageRef.current;
@@ -45,9 +51,11 @@ export function App({ storage }: AppProps) {
           cartTotal={list.cartText}
           plannedTotal={list.plannedText}
           overBudget={list.overBudget}
+          compact={compactHeader}
+          totalsRef={totalsRef}
           onOpenSettings={() => setSettingsView("settings")}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] pt-[19px] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+        <main ref={mainRef} className="min-h-0 flex-1 scroll-pt-[60px] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] pt-[19px] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
           <BudgetRow
             budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
             status={list.budgetShortText}
