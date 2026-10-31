@@ -1,8 +1,10 @@
 import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Item } from "../../src/domain/types";
+import type { Item, Receipt } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
 import { mountApp } from "../helpers/mountApp";
+import { version } from "../../package.json";
+
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
 beforeAll(() => {
@@ -20,11 +22,13 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-function setup(items: Item[] = [], budget: number | null = null) {
+function setup(items: Item[] = [], budget: number | null = null, receipts: Receipt[] = []) {
   const storage: GroceryStorage = {
     loadItems: () => items,
     saveItems: vi.fn(),
     loadDailyBudget: () => budget,
+    loadReceipts: () => receipts,
+    saveReceipts: vi.fn(),
     saveDailyBudget: vi.fn(),
   };
   const root = document.createElement("div");
@@ -152,9 +156,9 @@ describe("grocery app", () => {
     expect(q("#settings-home a")).toBeNull();
     click<HTMLButtonElement>("#open-about");
     expect(q("#settings-title").textContent).toBe("About");
-    expect(q("#about-page").textContent).toContain("v1.1.1");
+    expect(q("#about-page").textContent).toContain(`v${version}`);
     expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
-    expect(q<HTMLAnchorElement>("#about-page a").href).toBe("https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v1.1.1");
+    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`,);
     click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
     expect(q("#settings-title").textContent).toBe("Settings");
@@ -217,5 +221,76 @@ describe("grocery app", () => {
     click<HTMLButtonElement>("#undo-delete");
     expect(q("#list").textContent).toContain("Rice");
     expect(q<HTMLElement>("#undo-banner").hidden).toBe(true);
+  });
+
+  it("finishes a trip from the In cart tab, then shows the receipt in Settings", () => {
+    const { q, click, storage } = setup([{ ...rice, checked: true }, eggs], 150);
+    expect(q<HTMLElement>("#finish-trip").hidden).toBe(true); // only on the In cart tab
+    click<HTMLButtonElement>("#cart-tab");
+    expect(q<HTMLElement>("#finish-trip").hidden).toBe(false);
+    expect(q("#finish-trip").textContent).toContain("100.00");
+
+    click<HTMLButtonElement>("#finish-trip");
+    expect(storage.saveReceipts).toHaveBeenCalledTimes(1);
+    expect(q("#cart-card strong").textContent).toContain("0.00");
+    expect(q<HTMLElement>("#notice-banner").hidden).toBe(false);
+    expect(q("#needed-tab").getAttribute("aria-selected")).toBe("true");
+
+    click<HTMLButtonElement>("#open-settings");
+    expect(q("#receipts-count").textContent).toBe("1");
+    click<HTMLButtonElement>("#open-receipts");
+    expect(q("#settings-title").textContent).toBe("Receipts");
+    expect(q("#receipts-list").textContent).toContain("1 item");
+    expect(q("#receipts-list").textContent).toContain("100.00");
+
+    click<HTMLButtonElement>("#receipts-list button");
+    expect(q("#settings-title").textContent).toBe("Receipt");
+    expect(q("#receipt-detail").textContent).toContain("Rice");
+    expect(q("#receipt-detail").textContent).toContain("2 × ");
+    expect(q("#receipt-detail").textContent).not.toContain("Eggs");
+    expect(q("#receipt-total").textContent).toContain("100.00");
+    expect(q("#receipt-budget").textContent).toContain("50.00 left");
+
+    click<HTMLButtonElement>("#close-settings"); // back to the receipts list
+    expect(q("#settings-title").textContent).toBe("Receipts");
+    click<HTMLButtonElement>("#close-settings"); // back to Settings
+    expect(q("#settings-title").textContent).toBe("Settings");
+    click<HTMLButtonElement>("#close-settings"); // back to the list
+    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
+  });
+
+  it("disables Finish trip while the cart is empty", () => {
+    const { q, click } = setup([rice]);
+    click<HTMLButtonElement>("#cart-tab");
+    expect(q<HTMLButtonElement>("#finish-trip").disabled).toBe(true);
+  });
+
+  it("shows an empty state when there are no receipts", () => {
+    const { q, click } = setup();
+    click<HTMLButtonElement>("#open-settings");
+    expect(q("#receipts-count")).toBeNull();
+    click<HTMLButtonElement>("#open-receipts");
+    expect(q("#receipts-empty").textContent).toContain("Finish trip");
+  });
+
+  it("deletes a receipt only after confirming", () => {
+    const saved: Receipt = { id: "r1", finishedAt: "2026-10-30T08:00:00.000Z", currency: "PHP", lines: [{ name: "Rice", qty: 2, price: 50 }], total: 100, budget: null };
+    const { q, click, storage } = setup([], null, [saved]);
+    click<HTMLButtonElement>("#open-settings");
+    click<HTMLButtonElement>("#open-receipts");
+    click<HTMLButtonElement>("#receipts-list button");
+    expect(q("#receipt-budget")).toBeNull(); // no budget was set that day
+
+    click<HTMLButtonElement>("#delete-receipt");
+    expect(q<HTMLDialogElement>("#receipt-confirm-delete-dialog").open).toBe(true);
+    click<HTMLButtonElement>("#receipt-cancel-delete");
+    expect(q("#receipt-detail")).not.toBeNull();
+    expect(storage.saveReceipts).not.toHaveBeenCalled();
+
+    click<HTMLButtonElement>("#delete-receipt");
+    click<HTMLButtonElement>("#receipt-confirm-delete");
+    expect(storage.saveReceipts).toHaveBeenLastCalledWith([]);
+    expect(q("#settings-title").textContent).toBe("Receipts");
+    expect(q("#receipts-empty")).not.toBeNull();
   });
 });

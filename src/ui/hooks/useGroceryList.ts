@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { budgetStatus, parseBudget } from "../../domain/budget";
 import { addItem, removeItems, setAllChecked, updateItem } from "../../domain/items";
+import { addReceipt, buildReceipt, removeReceipt } from "../../domain/receipts";
 import { cartTotal, checkedCount, plannedTotal } from "../../domain/totals";
-import type { CurrencyCode, Item } from "../../domain/types";
+import type { CurrencyCode, Item, Receipt } from "../../domain/types";
 import { isCurrency, loadCurrency, saveCurrency } from "../../storage/currency";
 import type { GroceryStorage } from "../../storage/storage";
 import { budgetMessage, currencyFormatter, currencySymbol } from "../format";
 import type { Tab, UndoAction } from "../types";
 
 const UNDO_MS = 6000;
+const NOTICE_MS = 4000;
 const countLabel = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
 
 /** A delete the user has asked for but not yet confirmed. */
@@ -33,12 +35,20 @@ export function useGroceryList(storage: GroceryStorage) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [undo, setUndo] = useState<UndoAction | null>(null);
+  const [receipts, setReceipts] = useState<Receipt[]>(() => storage.loadReceipts());
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!undo) return;
     const timeout = window.setTimeout(() => setUndo(null), UNDO_MS);
     return () => window.clearTimeout(timeout);
   }, [undo]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
 
   // ---- derived values ----
   const money = useMemo(() => currencyFormatter(currency), [currency]);
@@ -84,6 +94,8 @@ export function useGroceryList(storage: GroceryStorage) {
     selectedIds,
     pendingDelete,
     undo,
+    receipts,
+    notice,
 
     // items
     addItem: (name: string) => commitItems(addItem(items, name)),
@@ -95,6 +107,27 @@ export function useGroceryList(storage: GroceryStorage) {
     setPrice: (id: string, price: number) => commitItems(updateItem(items, id, { price })),
     checkAll: (checked: boolean) => commitItems(setAllChecked(items, checked)),
     startNewTrip: () => commitItems(setAllChecked(items, false)),
+
+    // Saves a receipt for everything in the cart, then resets the list for the next trip.
+    // Does nothing when the cart is empty.
+    finishTrip(): void {
+      const receipt = buildReceipt(items, { currency, budget: dailyBudget });
+      if (!receipt) return;
+      const nextReceipts = addReceipt(receipts, receipt);
+      setReceipts(nextReceipts);
+      storage.saveReceipts(nextReceipts);
+      commitItems(setAllChecked(items, false));
+      setActiveTab("needed");
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      setNotice("Trip finished. Receipt saved in Settings.");
+    },
+    deleteReceipt(id: string): void {
+      const nextReceipts = removeReceipt(receipts, id);
+      setReceipts(nextReceipts);
+      storage.saveReceipts(nextReceipts);
+    },
+    dismissNotice: () => setNotice(null),
 
     // tabs + selection
     changeTab(tab: Tab): void {

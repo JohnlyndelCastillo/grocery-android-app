@@ -15,7 +15,9 @@ afterEach(() => {
 
 describe("currency tooltip", () => {
   it("is shown only from the (i) button, never from the currency dropdown", () => {
-    const storage: GroceryStorage = { loadItems: () => [], saveItems: vi.fn(), loadDailyBudget: () => null, saveDailyBudget: vi.fn() };
+    const storage: GroceryStorage = { loadItems: () => [], saveItems: vi.fn(), loadDailyBudget: () => null,
+    loadReceipts: () => [],
+    saveReceipts: vi.fn(), saveDailyBudget: vi.fn() };
     const root = document.createElement("div");
     document.body.replaceChildren(root);
     act(() => { unmount = mountApp(root, storage); });

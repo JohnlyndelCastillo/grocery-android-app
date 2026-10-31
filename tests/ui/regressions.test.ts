@@ -24,6 +24,8 @@ function setup(items: Item[]) {
     loadItems: () => items,
     saveItems: vi.fn(),
     loadDailyBudget: () => null,
+    loadReceipts: () => [],
+    saveReceipts: vi.fn(),
     saveDailyBudget: vi.fn(),
   };
   const root = document.createElement("div");

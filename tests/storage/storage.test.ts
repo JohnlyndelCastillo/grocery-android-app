@@ -33,3 +33,23 @@ describe("localStorage adapter", () => {
     expect(s.loadDailyBudget()).toBeNull();
   });
 });
+
+describe("localStorage adapter: receipts", () => {
+  beforeEach(() => localStorage.clear());
+  const receipt = { id: "r1", finishedAt: "2026-10-30T08:00:00.000Z", currency: "PHP" as const, lines: [{ name: "Rice", qty: 2, price: 50 }], total: 100, budget: null };
+
+  it("round-trips receipts", () => {
+    const s = createLocalStorageAdapter();
+    s.saveReceipts([receipt]);
+    expect(s.loadReceipts()).toEqual([receipt]);
+  });
+
+  it("returns [] for empty or corrupt data and drops malformed entries", () => {
+    const s = createLocalStorageAdapter();
+    expect(s.loadReceipts()).toEqual([]);
+    localStorage.setItem("grocery-receipts-v1", "{not json");
+    expect(s.loadReceipts()).toEqual([]);
+    localStorage.setItem("grocery-receipts-v1", JSON.stringify([receipt, { id: 5 }, null, { ...receipt, currency: "XXX" }]));
+    expect(s.loadReceipts()).toEqual([receipt]);
+  });
+});
