@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import type { GroceryStorage } from "../storage/storage";
 import { AddItemForm } from "./components/AddItemForm";
-import { BudgetPanel } from "./components/BudgetPanel";
+import { BudgetRow } from "./components/BudgetRow";
+import { BudgetSheet } from "./components/BudgetSheet";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { Header } from "./components/Header";
 import { NoticeBanner } from "./components/NoticeBanner";
@@ -18,6 +19,7 @@ interface AppProps {
 export function App({ storage }: AppProps) {
   const list = useGroceryList(storage);
   const [settingsView, setSettingsView] = useState<SettingsView>("closed");
+  const [budgetOpen, setBudgetOpen] = useState(false);
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [confirmReceiptDelete, setConfirmReceiptDelete] = useState(false);
   const selectedReceipt = list.receipts.find((r) => r.id === receiptId) ?? null;
@@ -45,14 +47,12 @@ export function App({ storage }: AppProps) {
           overBudget={list.overBudget}
           onOpenSettings={() => setSettingsView("settings")}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] pt-[19px] pb-[22px]">
-          <BudgetPanel
-            currency={list.currency}
-            symbol={list.currencyLabel}
-            budget={list.dailyBudget}
-            status={list.budgetText}
-            onCurrencyChange={list.changeCurrency}
-            onSaveBudget={list.saveBudget}
+        <main className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] pt-[19px] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+          <BudgetRow
+            budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
+            status={list.budgetShortText}
+            over={list.overBudget}
+            onOpen={() => setBudgetOpen(true)}
           />
           <AddItemForm onAdd={list.addItem} />
           <ShoppingList
@@ -79,23 +79,30 @@ export function App({ storage }: AppProps) {
             onFinishTrip={list.finishTrip}
           />
         </main>
-        <footer className="shrink-0 bg-app pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-2">
-          <button className="secondary block min-h-[46px] w-full rounded-xl border border-[#cbdcc9] bg-white font-bold text-green hover:bg-[#edf4ea]" id="uncheck" type="button" onClick={list.startNewTrip}>
-            <span className="mr-[5px] text-[1.05rem]" aria-hidden="true">↻</span> Start a new trip
-          </button>
-        </footer>
       </div>
 
       <SettingsPage
         view={settingsView}
         receipts={list.receipts}
         selectedReceipt={selectedReceipt}
+        currency={list.currency}
+        onCurrencyChange={list.changeCurrency}
+        onOpenCurrency={() => setSettingsView("currency")}
         onOpenAbout={() => setSettingsView("about")}
         onOpenReceipts={() => setSettingsView("receipts")}
         onOpenReceipt={(id) => { setReceiptId(id); setSettingsView("receipt"); }}
         onDeleteReceipt={() => setConfirmReceiptDelete(true)}
         onClose={() => setSettingsView(parentView)}
         onHomeEnter={animateHomePageIn}
+      />
+      <BudgetSheet
+        open={budgetOpen}
+        budget={list.dailyBudget}
+        symbol={list.currencyLabel}
+        money={list.money}
+        cartAmount={list.cartAmount}
+        onSave={list.saveBudget}
+        onClose={() => setBudgetOpen(false)}
       />
       <DeleteDialog
         open={list.pendingDelete !== null}
