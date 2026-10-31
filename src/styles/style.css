@@ -231,6 +231,63 @@ dialog::backdrop { background: var(--color-backdrop); backdrop-filter: blur(.125
 }
 .swipe-enter { animation: grocery-item-enter 180ms cubic-bezier(.2,.75,.25,1) both; }
 
+/* Today's Budget bottom-sheet transitions */
+#budget-sheet {
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+
+  transition:
+    opacity 220ms ease-out,
+    transform 220ms ease-out,
+    display 220ms allow-discrete,
+    overlay 220ms allow-discrete;
+
+  transition-behavior: allow-discrete;
+}
+
+#budget-sheet[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Initial state when the dialog enters the top layer */
+@starting-style {
+  #budget-sheet[open] {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+}
+
+/* Backdrop fade */
+#budget-sheet::backdrop {
+  background-color: rgb(0 0 0 / 0);
+
+  transition:
+    background-color 220ms ease-out,
+    display 220ms allow-discrete,
+    overlay 220ms allow-discrete;
+
+  transition-behavior: allow-discrete;
+}
+
+#budget-sheet[open]::backdrop {
+  background-color: rgb(0 0 0 / 0.45);
+}
+
+@starting-style {
+  #budget-sheet[open]::backdrop {
+    background-color: rgb(0 0 0 / 0);
+  }
+}
+
+/* Respect accessibility preferences */
+@media (prefers-reduced-motion: reduce) {
+  #budget-sheet,
+  #budget-sheet::backdrop {
+    transition: none;
+  }
+}
+
 /* Optional system dark theme. Semantic tokens keep component markup theme-agnostic. */
 @media (prefers-color-scheme: dark) {
   :root {
