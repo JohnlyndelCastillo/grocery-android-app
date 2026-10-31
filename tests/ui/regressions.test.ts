@@ -51,7 +51,7 @@ describe("regressions", () => {
     click<HTMLButtonElement>("#delete-selected");
     click<HTMLButtonElement>("#confirm-delete");
     expect(q<HTMLElement>("#bulk-actions").hidden).toBe(true);
-    expect(q("#toggle-select").textContent).toBe("Select Items");
+    expect(q("#toggle-select").textContent).toBe("Select");
   });
 
   it("says '1 item deleted' (singular) for a one-item bulk delete", () => {

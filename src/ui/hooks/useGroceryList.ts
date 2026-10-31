@@ -6,7 +6,7 @@ import { cartTotal, checkedCount, plannedTotal } from "../../domain/totals";
 import type { CurrencyCode, Item, Receipt } from "../../domain/types";
 import { isCurrency, loadCurrency, saveCurrency } from "../../storage/currency";
 import type { GroceryStorage } from "../../storage/storage";
-import { budgetMessage, currencyFormatter, currencySymbol } from "../format";
+import { budgetMessage, budgetShort, currencyFormatter, currencySymbol } from "../format";
 import type { Tab, UndoAction } from "../types";
 
 const UNDO_MS = 6000;
@@ -87,6 +87,8 @@ export function useGroceryList(storage: GroceryStorage) {
     currencyLabel: currencySymbol(money) || currency,
     dailyBudget,
     budgetText: budgetMessage(status, money),
+    budgetShortText: budgetShort(status, money),
+    cartAmount,
     overBudget: status.state === "over",
     cartText: money.format(cartAmount),
     plannedText: money.format(plannedTotal(items)),
@@ -106,8 +108,6 @@ export function useGroceryList(storage: GroceryStorage) {
     setQty: (id: string, qty: number) => commitItems(updateItem(items, id, { qty })),
     setPrice: (id: string, price: number) => commitItems(updateItem(items, id, { price })),
     checkAll: (checked: boolean) => commitItems(setAllChecked(items, checked)),
-    startNewTrip: () => commitItems(setAllChecked(items, false)),
-
     // Saves a receipt for everything in the cart, then resets the list for the next trip.
     // Does nothing when the cart is empty.
     finishTrip(): void {

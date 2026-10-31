@@ -16,6 +16,16 @@ export function budgetMessage(s: BudgetStatus, format: Intl.NumberFormat): strin
   }
 }
 
+// Short form for the one-line budget row: "₱400.00 left", "₱20.00 over", "On budget".
+export function budgetShort(s: BudgetStatus, format: Intl.NumberFormat): string {
+  switch (s.state) {
+    case "none": return "";
+    case "over": return format.format(s.amount) + " over";
+    case "exact": return "On budget";
+    case "left": return format.format(s.amount) + " left";
+  }
+}
+
 // "₱", "₫" or "$": the symbol for whichever currency the formatter was built with.
 export function currencySymbol(format: Intl.NumberFormat): string {
   return format.formatToParts(0).find((part) => part.type === "currency")?.value ?? "";
