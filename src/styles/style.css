@@ -108,8 +108,6 @@ body { min-width: 320px; background: var(--color-app); }
 .list-tab { transition: color .22s ease; }
 .list-tab[aria-selected="true"] { color: var(--green-dark); }
 
-#list { scrollbar-gutter: stable; }
-
 li.done { background: #f0f5ef; }
 li.done .name { color: #89958b; text-decoration: line-through; }
 li.done .item-subtotal { color: #8e9a90; }
