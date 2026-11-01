@@ -29,11 +29,7 @@
   --color-on-danger: #ffffff; /* Text and icons on a Destructive fill */
   --color-scrim: #10111c66; /* #10111C at 40%, flat, in both modes */
 
-  /* The old orange "budget-*" family, renamed so it can't be mistaken for Budget surface.
-     Still used by the over-budget states until those are redrawn (Batches 2, 4 and 5). */
-  --color-warn-ink: #923d27;
-  --color-warn-border: #f4c2ab;
-  --color-warn-surface: #fff0e8;
+  /* Orange text for an invalid amount in the budget sheet. Replaced by Destructive text in Batch 4. */
   --color-warn-label: #a04e35;
 
   /* Names components still use, now pointing at a role so each role has one value.
@@ -80,7 +76,7 @@
   --color-card-shadow: #263d2d08;
 
   --gutter: clamp(.8125rem, 4.5vw, 1.125rem); /* keep in sync with the #app padding below */
-  --bar-h: calc(3.75rem + env(safe-area-inset-top, 0px));
+  --bar-h: calc(4rem + env(safe-area-inset-top, 0px)); /* a 48dp button with 8dp above and below */
 }
 
 :root {
@@ -163,9 +159,6 @@ body { min-width: 320px; background: var(--color-app); }
 #new-name.invalid, #new-name.invalid:focus { border-color: var(--color-danger); }
 #new-name.invalid:focus-visible { outline-color: var(--color-danger); }
 
-/* Flat Action fill. The whole header is rebuilt in Batch 2. */
-.hero { background: var(--color-green-fill); }
-
 .list-tabs::before {
   position: absolute;
   z-index: -1;
@@ -173,7 +166,7 @@ body { min-width: 320px; background: var(--color-app); }
   bottom: .25rem;
   left: .25rem;
   width: calc((100% - .875rem) / 2);
-  border-radius: .5625rem;
+  border-radius: .5rem;
   background: var(--color-tab-active);
   content: "";
   transition: transform .22s cubic-bezier(.2,.75,.25,1), background-color .22s ease;
@@ -230,7 +223,6 @@ dialog::backdrop { background: var(--color-scrim); }
 
 @media (orientation: landscape) and (max-height: 500px) {
   #app { height: 100dvh; }
-  .hero { flex-shrink: 0; }
   .settings-page { overflow-y: auto; }
 }
 
@@ -322,10 +314,7 @@ dialog::backdrop { background: var(--color-scrim); }
     --color-danger-soft: #42272e;
     --color-on-danger: #141a16;
 
-    --color-warn-ink: #ffd0bd;
-    --color-warn-border: #744d43;
-    --color-warn-surface: #3c2a25;
-    --color-warn-label: #f0a184;
+          --color-warn-label: #f0a184;
 
     --color-toast: #2c382f;
     --color-card-shadow: #00000030;
