@@ -59,8 +59,8 @@ describe("currency in Settings", () => {
 
     click<HTMLButtonElement>("#close-settings");
     expect(q("#settings-title").textContent).toBe("Settings");
-    expect(q("#currency-value").textContent).toContain("USD ($)");
+    expect(q("#currency-value").textContent).toBe("USD");
     click<HTMLButtonElement>("#close-settings");
-    expect(q("#cart-card strong").textContent).toBe("$100.00");
+    expect(q("#cart-card strong").textContent).toBe("USD\u00a0100");
   });
 });

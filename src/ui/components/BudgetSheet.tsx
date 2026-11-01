@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { budgetStatus, parseBudget } from "../../domain/budget";
-import { budgetMessage } from "../format";
+import { budgetMessage, type Money } from "../format";
 
 interface BudgetSheetProps {
   open: boolean;
   budget: number | null;
   symbol: string;
-  money: Intl.NumberFormat;
+  money: Money;
   cartAmount: number;
   onSave(raw: string): void; // "" clears the budget
   onClose(): void;
@@ -52,7 +52,7 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
     <dialog
       ref={dialogRef}
       id="budget-sheet"
-      className="mx-auto mb-0 mt-auto w-full max-w-[620px] rounded-b-none rounded-t-3xl border-0 bg-app p-0 text-ink shadow-[0_-8px_40px_var(--color-dialog-shadow)]"
+      className="mx-auto mb-0 mt-auto w-full max-w-[620px] rounded-b-none rounded-t-3xl border-0 bg-app p-0 text-ink"
       aria-labelledby="budget-sheet-title"
       onCancel={(event) => {
         event.preventDefault();
@@ -83,15 +83,15 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
               setDraft(event.currentTarget.value);
               setError(false);
             }}
-            className="!h-[3.125rem] w-full !pl-[30px]"
+            className="!h-[3.125rem] w-full !pl-[3.5rem]"
           />
         </div>
-        <p id="budget-preview" className={`mb-[18px] mt-2 min-h-[1.2em] text-[.82rem] font-semibold ${invalid ? "text-[var(--color-budget-warning)]" : "text-green"}`} aria-live="polite">{preview}</p>
-        <button className="block min-h-[3.125rem] w-full rounded-xl bg-green-fill font-bold text-white" type="submit">Save</button>
+        <p id="budget-preview" className={`num mb-[18px] mt-2 min-h-[1.2em] text-[.82rem] font-semibold ${invalid ? "text-[var(--color-warn-label)]" : "text-green"}`} aria-live="polite">{preview}</p>
+        <button className="block min-h-[3.125rem] w-full rounded-xl bg-green-fill font-bold text-on-action" type="submit">Save</button>
         {budget !== null && (
           <button
             id="clear-budget"
-            className="mt-[6px] block min-h-12 w-full bg-transparent font-bold text-[var(--color-budget-warning)]"
+            className="mt-[6px] block min-h-12 w-full bg-transparent font-bold text-[var(--color-warn-label)]"
             type="button"
             onClick={() => {
               onSave("");

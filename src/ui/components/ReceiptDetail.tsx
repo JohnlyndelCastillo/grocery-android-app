@@ -1,7 +1,7 @@
 import { budgetStatus } from "../../domain/budget";
 import { lineTotal } from "../../domain/totals";
 import type { Receipt } from "../../domain/types";
-import { budgetMessage, currencyFormatter, formatReceiptDate } from "../format";
+import { budgetMessage, formatReceiptDate, makeMoney } from "../format";
 
 interface ReceiptDetailProps {
   receipt: Receipt | null;
@@ -10,7 +10,7 @@ interface ReceiptDetailProps {
 
 export function ReceiptDetail({ receipt, onDelete }: ReceiptDetailProps) {
   if (!receipt) return null;
-  const money = currencyFormatter(receipt.currency);
+  const money = makeMoney(receipt.currency);
   const status = budgetStatus(receipt.total, receipt.budget);
 
   return (
@@ -23,16 +23,16 @@ export function ReceiptDetail({ receipt, onDelete }: ReceiptDetailProps) {
               <span className="block break-words text-[.95rem] text-[var(--color-settings-ink)]">{line.name}</span>
               <span className="block text-[.78rem] text-muted">{line.qty} × {money.format(line.price)}</span>
             </span>
-            <span className="whitespace-nowrap text-[.92rem] text-[var(--color-settings-ink)]">{money.format(lineTotal({ ...line, id: "", checked: true }))}</span>
+            <span className="num whitespace-nowrap text-[.92rem] text-[var(--color-settings-ink)]">{money.format(lineTotal({ ...line, id: "", checked: true }))}</span>
           </li>
         ))}
       </ul>
       <div className="flex items-center justify-between py-4">
         <span className="font-bold text-[var(--color-settings-ink)]">Total</span>
-        <strong id="receipt-total" className="text-[1.15rem] text-green-dark">{money.format(receipt.total)}</strong>
+        <strong id="receipt-total" className="num text-[1.15rem] text-green-dark">{money.format(receipt.total)}</strong>
       </div>
       {receipt.budget !== null && (
-        <p id="receipt-budget" className="m-0 text-[.8rem] text-[var(--color-budget-muted)]">
+        <p id="receipt-budget" className="m-0 text-[.8rem] text-muted">
           Budget {money.format(receipt.budget)} · {budgetMessage(status, money)}
         </p>
       )}

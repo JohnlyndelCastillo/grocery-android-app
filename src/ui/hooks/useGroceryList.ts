@@ -6,7 +6,7 @@ import { cartTotal, checkedCount, plannedTotal } from "../../domain/totals";
 import type { CurrencyCode, Item, Receipt } from "../../domain/types";
 import { isCurrency, loadCurrency, saveCurrency } from "../../storage/currency";
 import type { GroceryStorage } from "../../storage/storage";
-import { budgetMessage, budgetShort, currencyFormatter, currencySymbol } from "../format";
+import { budgetMessage, budgetShort, makeMoney } from "../format";
 import type { Tab, UndoAction } from "../types";
 
 const UNDO_MS = 6000;
@@ -51,7 +51,7 @@ export function useGroceryList(storage: GroceryStorage) {
   }, [notice]);
 
   // ---- derived values ----
-  const money = useMemo(() => currencyFormatter(currency), [currency]);
+  const money = useMemo(() => makeMoney(currency), [currency]);
   const cartAmount = cartTotal(items);
   const status = budgetStatus(cartAmount, dailyBudget);
   const visibleItems = items.filter((item) => (activeTab === "needed" ? !item.checked : item.checked));
@@ -84,7 +84,7 @@ export function useGroceryList(storage: GroceryStorage) {
     doneCount: checkedCount(items),
     money,
     currency,
-    currencyLabel: currencySymbol(money) || currency,
+    currencyLabel: currency, // the plain code ("PHP"), used as the price placeholder and the budget field prefix
     dailyBudget,
     budgetText: budgetMessage(status, money),
     budgetShortText: budgetShort(status, money),

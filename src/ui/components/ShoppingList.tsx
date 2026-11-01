@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Item } from "../../domain/types";
 import type { Tab } from "../types";
 import { GroceryRow } from "./GroceryRow";
+import type { Money } from "../format";
 
 interface ShoppingListProps {
   allItems: Item[];
@@ -10,7 +11,7 @@ interface ShoppingListProps {
   doneCount: number;
   selectedIds: Set<string>;
   selectionMode: boolean;
-  money: Intl.NumberFormat;
+  money: Money;
   pricePlaceholder: string;
   cartText: string;
   onTabChange(tab: Tab): void;
@@ -76,7 +77,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
           <input ref={selectAllRef} id="select-all" className="size-[1.125rem] accent-green" type="checkbox" checked={visibleItems.length > 0 && selectedVisibleCount === visibleItems.length} onChange={(event) => onSelectAll(event.currentTarget.checked)} />
           Select all to delete
         </label>
-        <button id="delete-selected" className="min-h-[2.125rem] rounded-xl bg-[var(--color-danger-fill)] px-[11px] text-[.78rem] font-bold text-white disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
+        <button id="delete-selected" className="min-h-[2.125rem] rounded-xl bg-[var(--color-danger-fill)] px-[11px] text-[.78rem] font-bold text-on-danger disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
           {selectedIds.size ? `Delete selected (${selectedIds.size})` : "Delete selected"}
         </button>
       </div>
@@ -107,7 +108,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
       {activeTab === "cart" && (
         <button
             id="finish-trip"
-            className="mt-3 block min-h-[2.875rem] w-full rounded-xl bg-green-fill font-bold text-white disabled:cursor-default disabled:opacity-45"
+            className="mt-3 block min-h-[2.875rem] w-full num rounded-xl bg-green-fill font-bold text-on-action disabled:cursor-default disabled:opacity-45"
             type="button"
             disabled={doneCount === 0}
             onClick={onFinishTrip}

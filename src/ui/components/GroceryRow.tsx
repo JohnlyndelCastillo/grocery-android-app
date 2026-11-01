@@ -2,10 +2,11 @@ import { useRef } from "react";
 import { lineTotal } from "../../domain/totals";
 import type { Item } from "../../domain/types";
 import { useSwipe } from "../hooks/useSwipe";
+import type { Money } from "../format";
 
 interface GroceryRowProps {
   item: Item;
-  money: Intl.NumberFormat;
+  money: Money;
   pricePlaceholder: string;
   selecting: boolean;
   selected: boolean;
@@ -51,7 +52,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
       className={`group swipe-row swipe-enter touch-pan-y relative mb-2 flex min-h-16 items-center overflow-hidden rounded-[15px] border border-line bg-[var(--color-surface)] shadow-[0_2px_7px_var(--color-card-shadow)] ${item.checked ? "done" : ""}`}
     >
       <button
-        className="swipe-delete absolute inset-y-0 right-0 w-[84px] rounded-none bg-[var(--color-danger-fill)] text-[.82rem] font-bold text-white"
+        className="swipe-delete absolute inset-y-0 right-0 w-[84px] rounded-none bg-[var(--color-danger-fill)] text-[.82rem] font-bold text-on-danger"
         type="button"
         aria-label={`Delete ${item.name}`}
         onClick={() => onSwipeDelete(item.id, item.name)}
