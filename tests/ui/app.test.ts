@@ -63,26 +63,26 @@ describe("grocery app", () => {
     expect(q("#cart-tab").textContent).toContain("In cart 1");
   });
 
-  it("shows the progress bar and count pill, and updates them as items are checked", () => {
+  it("shows the progress label, count and bar, and updates them as items are checked", () => {
     const { q, click } = setup([rice, eggs]);
     const bar = () => q<HTMLElement>("[role=progressbar]");
     expect(q("#item-count").textContent).toBe("0 / 2");
     expect(bar().getAttribute("aria-valuenow")).toBe("0");
     expect(bar().getAttribute("aria-valuemax")).toBe("2");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 0%");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(0)");
 
     click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
     expect(q("#item-count").textContent).toBe("1 / 2");
     expect(q("#item-count").getAttribute("aria-label")).toBe("1 of 2 items in cart");
     expect(bar().getAttribute("aria-valuenow")).toBe("1");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 50%");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(0.5)");
 
     click<HTMLInputElement>("#check-all");
     expect(q("#item-count").textContent).toBe("2 / 2");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("width: 100%");
+    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(1)");
   });
 
-  it("keeps the progress bar and count pill on both tabs and with an empty list", () => {
+  it("keeps the progress count and bar on both tabs and with an empty list", () => {
     const { q, click } = setup([{ ...rice, checked: true }, eggs]);
     click<HTMLButtonElement>("#cart-tab");
     expect(q("#item-count").textContent).toBe("1 / 2");
@@ -91,7 +91,7 @@ describe("grocery app", () => {
 
     const empty = setup();
     expect(empty.q("#item-count").textContent).toBe("0 / 0");
-    expect(empty.q("[role=progressbar]").firstElementChild!.getAttribute("style")).toContain("width: 0%");
+    expect(empty.q("[role=progressbar]").firstElementChild!.getAttribute("style")).toContain("scaleX(0)");
   });
 
   it("filters items into Still needed and In cart tabs as their checked state changes", () => {
@@ -127,7 +127,7 @@ describe("grocery app", () => {
   it("flags the cart card when over budget", () => {
     const { q } = setup([{ ...rice, checked: true }], 80);
     expect(q("#cart-card").getAttribute("aria-label")).toContain("over today's budget");
-    expect(q("#budget-status").textContent).toContain("over");
+    expect(q("#budget-status").textContent).toContain("Over by");
   });
 
   it("saves a new budget from the form", () => {
@@ -135,7 +135,8 @@ describe("grocery app", () => {
     q<HTMLInputElement>("#budget-input").value = "500";
     submit("#budget-form");
     expect(storage.saveDailyBudget).toHaveBeenCalledWith(500);
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0500 left");
+    expect(q("#budget-status").textContent).toContain("Remaining");
+    expect(q("#budget-status").textContent).toContain("PHP\u00a0500");
   });
 
   it("deletes selected items after confirming", () => {
@@ -165,9 +166,9 @@ describe("grocery app", () => {
     expect(q("#list").textContent).not.toContain("Rice");
   });
 
-  it("shows just the title, settings button and spending totals in the header", () => {
+  it("shows the title, the settings button and the spending totals", () => {
     const { q } = setup([rice]);
-    expect(q("header h1").textContent).toBe("Grocery list");
+    expect(q("header h1").textContent).toBe("Shopping list");
     expect(q("#open-settings")).not.toBeNull();
     expect(q("#collapse-header")).toBeNull();
     expect(q("#cart-card strong").textContent).toBe("PHP\u00a00");
@@ -333,7 +334,8 @@ describe("grocery app", () => {
   it("edits the budget in a bottom sheet opened from the budget row, and can clear it", () => {
     const { q, click, submit, storage } = setup([{ ...rice, checked: true }], 500);
     expect(q("#budget-row").textContent).toContain("PHP\u00a0500");
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0400 left");
+    expect(q("#budget-status").textContent).toContain("Remaining");
+    expect(q("#budget-status").textContent).toContain("PHP\u00a0400");
     expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
 
     click<HTMLButtonElement>("#budget-row");
@@ -343,13 +345,14 @@ describe("grocery app", () => {
     submit("#budget-form");
     expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(300);
     expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0200 left");
+    expect(q("#budget-status").textContent).toContain("PHP\u00a0200");
 
     click<HTMLButtonElement>("#budget-row");
     expect(q<HTMLInputElement>("#budget-input").value).toBe("300"); // reopened with the saved value
     click<HTMLButtonElement>("#clear-budget");
     expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(null);
-    expect(q("#budget-row").textContent).toContain("Set a daily budget");
+    expect(q("#budget-row").textContent).toContain("Not set");
+    expect(q("#budget-status").textContent).toBe("Set budget");
     expect(q("#clear-budget")).toBeNull();
   });
 
@@ -378,11 +381,80 @@ describe("grocery app", () => {
     expect(q("#budget-preview").textContent).toContain("PHP\u00a020 over");
   });
 
-  it("turns the budget row orange when over budget", () => {
-    const { q } = setup([{ ...rice, checked: true }], 80);
-    expect(q("#budget-row").className).toContain("bg-[var(--color-warn-surface)]");
-    expect(q("#budget-row").className).toContain("border-[var(--color-warn-border)]");
-    expect(q("#budget-row").className).toContain("text-[var(--color-warn-ink)]");
-    expect(q("#budget-status").textContent).toContain("PHP\u00a020 over");
+  it("shows the summary card: cart, planned, today's budget and what is left", () => {
+    const { q } = setup([{ ...rice, checked: true }, eggs], 500);
+    const card = q("section[aria-label='Spending summary']");
+    expect(card.contains(q("#cart-card"))).toBe(true);
+    expect(card.contains(q("#budget-row"))).toBe(true);
+    expect(q("#cart-card").textContent).toContain("In your cart");
+    expect(q("#cart-card strong").textContent).toBe("PHP\u00a0100");
+    expect(q(".totals .total-card:nth-child(2)").textContent).toContain("Planned total");
+    expect(q(".totals .total-card:nth-child(2) strong").textContent).toBe("PHP\u00a0130");
+    expect(q("#budget-row").textContent).toContain("Today’s budget");
+    expect(q("#budget-row").textContent).toContain("PHP\u00a0500");
+    expect(q("#budget-status").textContent).toBe("RemainingPHP\u00a0400");
+  });
+
+  it("labels the budget by state: Over by, exactly on budget, and not set", () => {
+    const over = setup([{ ...rice, checked: true }], 80);
+    expect(over.q("#budget-status").textContent).toBe("Over byPHP\u00a020");
+    expect(over.q("#budget-status span:last-child").className).toContain("--color-danger"); // destructive text, not orange
+
+    const exact = setup([{ ...rice, checked: true }], 100);
+    expect(exact.q("#budget-status").textContent).toBe("RemainingPHP\u00a00");
+
+    const none = setup([rice]);
+    expect(none.q("#budget-row").textContent).toContain("Not set");
+    expect(none.q("#budget-status").textContent).toBe("Set budget");
+  });
+
+  it("opens the budget sheet from the whole budget row", () => {
+    const { q, click } = setup([], 100);
+    click<HTMLButtonElement>("#budget-row");
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
+  });
+
+  it("is flat: no green header, no gradient, and the cards use the surface color", () => {
+    const { q } = setup([rice], 100);
+    expect(document.querySelector(".hero")).toBeNull();
+    expect(q("#app-header").className).not.toMatch(/hero|gradient|green/);
+    expect(q("#app-bar").outerHTML).not.toMatch(/gradient/);
+    expect(q("section[aria-label='Spending summary']").className).toContain("bg-[var(--color-surface)]");
+  });
+
+  it("gives every control on the Home top a 48dp touch target", () => {
+    const { q } = setup([rice], 100);
+    for (const sel of ["#open-settings", "#budget-row", "#add-form button", "#needed-tab", "#cart-tab"]) {
+      expect(q(sel).className, sel).toMatch(/(^|\s)tap(\s|$)/);
+    }
+    expect(q("#new-name").className).not.toMatch(/\bh-\d|\bmin-h-\[?\d/); // the base input style already gives it 48px
+  });
+
+  it("has the new add form: an 'Add an item' field and a '+ Add' button", () => {
+    const { q } = setup();
+    expect(q<HTMLInputElement>("#new-name").placeholder).toBe("Add an item");
+    expect(q("#add-form button").textContent?.trim()).toBe("Add");
+    expect(q("#add-form button svg")).not.toBeNull(); // the plus icon
+  });
+
+  it("lets the add form wrap, so the button drops below the field when it can't fit", () => {
+    const { q } = setup();
+    expect(q("#add-form").className).toContain("flex-wrap");
+  });
+
+  it("shows tab counts as plain numbers after the label, and lets the tabs grow with the text", () => {
+    const { q } = setup([rice, eggs]);
+    expect(q("#needed-tab").textContent).toBe("Still needed 2");
+    expect(q("#cart-tab").textContent).toBe("In cart 0");
+    expect(q("#needed-tab").className).not.toContain("whitespace-nowrap");
+    expect(q("#needed-tab span.rounded-full, #needed-tab span[class*='rounded-[10px]']")).toBeNull(); // no count pill
+  });
+
+  it("scales the progress bar instead of resizing it, so it never triggers layout", () => {
+    const { q } = setup([{ ...rice, checked: true }, eggs]);
+    const fill = q<HTMLElement>("[role=progressbar] > span");
+    expect(fill.className).toContain("transition-transform");
+    expect(fill.className).not.toMatch(/transition-\[?width/);
+    expect(fill.getAttribute("style")).not.toContain("width");
   });
 });

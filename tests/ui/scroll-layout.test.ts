@@ -111,7 +111,7 @@ describe("collapsing header", () => {
     const { q, scrollTo } = setup();
     scrollTo(120);
     expect(q("#open-settings")).not.toBeNull();
-    expect(q("#app-header h1").textContent).toBe("Grocery list");
+    expect(q("#app-header h1").textContent).toBe("Shopping list");
   });
 
   it("the compact summary still says when you're over budget", () => {

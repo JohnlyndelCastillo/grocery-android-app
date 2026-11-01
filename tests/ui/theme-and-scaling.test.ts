@@ -33,10 +33,11 @@ describe("theme and responsive scaling foundations", () => {
     expect(settingsGroup).toContain("var(--color-settings-hover)");
   });
 
-  it("keeps the over-budget orange under warn-*, and Budget surface as the neutral tint", () => {
-    expect(stylesheet).toContain("--color-warn-surface: #fff0e8");
-    expect(stylesheet).toContain("--color-warn-border: #f4c2ab");
+  it("keeps Budget surface as the neutral tint and has no orange over-budget surface left", () => {
     expect(stylesheet).toContain("--color-budget-surface: #edf3ef");
+    expect(stylesheet).not.toContain("--color-warn-surface");
+    expect(stylesheet).not.toContain("--color-warn-border");
+    expect(stylesheet).not.toContain("--color-warn-ink");
   });
 
   it("provides a system dark palette and reduced-motion support", () => {
@@ -78,10 +79,10 @@ describe("theme and responsive scaling foundations", () => {
 
   it("leaves no reference to a deleted token anywhere in the source", () => {
     const deleted = ["hero-start", "hero-end", "hero-muted", "hero-shadow", "white-20", "white-06", "white-05", "over-budget-accent",
-      "button-shadow", "dialog-shadow", "backdrop", "placeholder", "focus-ring", "danger-ring", "green-fill-hover"];
+      "warn-ink", "warn-border", "warn-surface", "button-shadow", "dialog-shadow", "backdrop", "placeholder", "focus-ring", "danger-ring", "green-fill-hover"];
     const sources = [
       stylesheet,
-      ...["Header", "AddItemForm", "BudgetRow", "BudgetSheet", "DeleteDialog", "GroceryRow", "ShoppingList", "SettingsPage"].map((name) =>
+      ...["Header", "SummaryCard", "AddItemForm", "BudgetSheet", "DeleteDialog", "GroceryRow", "ShoppingList", "SettingsPage"].map((name) =>
         readFileSync(resolve(projectRoot, `src/ui/components/${name}.tsx`), "utf8")),
     ].join("\n");
     for (const token of deleted) expect(sources, `--color-${token}`).not.toContain(`--color-${token}`);

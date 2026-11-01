@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import type { GroceryStorage } from "../storage/storage";
 import { AddItemForm } from "./components/AddItemForm";
-import { BudgetRow } from "./components/BudgetRow";
 import { BudgetSheet } from "./components/BudgetSheet";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { Header } from "./components/Header";
 import { NoticeBanner } from "./components/NoticeBanner";
 import { SettingsPage } from "./components/SettingsPage";
+import { SummaryCard } from "./components/SummaryCard";
 import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
 import { useGroceryList } from "./hooks/useGroceryList";
@@ -43,20 +43,22 @@ export function App({ storage }: AppProps) {
   return (
     <>
       <div ref={homePageRef} id="home-page" className="flex h-full min-h-0 flex-col" hidden={settingsView !== "closed"}>
-        <main ref={mainRef} className="-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+3.5rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+        <main ref={mainRef} className="-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+4rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
           <Header
             cartTotal={list.cartText}
-            plannedTotal={list.plannedText}
             overBudget={list.overBudget}
             scrollerRef={mainRef}
             onOpenSettings={() => setSettingsView("settings")}
           />
-          <div className="pt-[19px]">
-            <BudgetRow
-              budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
-              status={list.budgetShortText}
-              over={list.overBudget}
-              onOpen={() => setBudgetOpen(true)}
+          <div className="pt-2">
+            <SummaryCard
+              cartTotal={list.cartText}
+              plannedTotal={list.plannedText}
+              budget={list.dailyBudget}
+              status={list.budgetStatus}
+              money={list.money}
+              scrollerRef={mainRef}
+              onOpenBudget={() => setBudgetOpen(true)}
             />
             <AddItemForm onAdd={list.addItem} />
             <ShoppingList

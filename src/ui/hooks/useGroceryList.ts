@@ -88,6 +88,7 @@ export function useGroceryList(storage: GroceryStorage) {
     dailyBudget,
     budgetText: budgetMessage(status, money),
     budgetShortText: budgetShort(status, money),
+    budgetStatus: status,
     cartAmount,
     overBudget: status.state === "over",
     cartText: money.format(cartAmount),

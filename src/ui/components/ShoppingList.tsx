@@ -43,21 +43,25 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
 
   return (
     <section className="list-section" aria-label="Your list">
-      <div className="mb-2 flex items-center gap-3">
-        <div className="progress-track h-[5px] flex-1 overflow-hidden rounded-[9px] bg-[var(--color-tabs-surface)]" role="progressbar" aria-label="Shopping progress" aria-valuemin={0} aria-valuemax={allItems.length} aria-valuenow={doneCount}>
-          <span className="block h-full rounded-[inherit] bg-[var(--color-focus)] transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+      <div className="mb-3">
+        <div className="mb-1.5 flex items-baseline justify-between gap-3 text-label">
+          <span id="progress-label" className="text-muted">Shopping progress</span>
+          <span id="item-count" className="num font-semibold text-ink" aria-label={`${doneCount} of ${allItems.length} items in cart`}>
+            {doneCount} / {allItems.length}
+          </span>
         </div>
-        <span id="item-count" className="shrink-0 rounded-[20px] bg-[var(--color-selection-hover)] px-[10px] py-[5px] text-[.73rem] font-bold text-green" aria-label={`${doneCount} of ${allItems.length} items in cart`}>
-          {doneCount} / {allItems.length}
-        </span>
+        <div className="progress-track h-1 overflow-hidden rounded-full bg-[var(--color-track)]" role="progressbar" aria-labelledby="progress-label" aria-valuemin={0} aria-valuemax={allItems.length} aria-valuenow={doneCount}>
+          {/* Scaled, not resized: animating width would re-run layout. */}
+          <span className="block h-full origin-left rounded-[inherit] bg-[var(--color-green)] transition-transform duration-200 motion-reduce:transition-none" style={{ transform: `scaleX(${progress / 100})` }} />
+        </div>
       </div>
       <div className="sticky top-[var(--bar-h)] z-10 bg-app pb-2 pt-1">
       <div className={`list-tabs relative isolate flex gap-[6px] rounded-xl bg-[var(--color-tabs-surface)] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
-        <button id="needed-tab" className="list-tab relative z-[1] min-h-[2.375rem] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
-          Still needed <span className="ml-[3px] inline-block min-w-[18px] rounded-[10px] bg-[var(--color-tabs-surface)] px-[5px] py-[2px] text-center text-[.68rem]">{neededCount}</span>
+        <button id="needed-tab" className="list-tab tap relative z-[1] flex-1 rounded-lg bg-transparent px-3 py-2 text-tab font-semibold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
+          Still needed <span className="num ml-1">{neededCount}</span>
         </button>
-        <button id="cart-tab" className="list-tab relative z-[1] min-h-[2.375rem] flex-1 rounded-[9px] bg-transparent px-[10px] py-[7px] text-[.78rem] font-bold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "cart"} tabIndex={activeTab === "cart" ? 0 : -1} onClick={() => onTabChange("cart")}>
-          In cart <span className="ml-[3px] inline-block min-w-[18px] rounded-[10px] bg-[var(--color-tabs-surface)] px-[5px] py-[2px] text-center text-[.68rem]">{allItems.length - neededCount}</span>
+        <button id="cart-tab" className="list-tab tap relative z-[1] flex-1 rounded-lg bg-transparent px-3 py-2 text-tab font-semibold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "cart"} tabIndex={activeTab === "cart" ? 0 : -1} onClick={() => onTabChange("cart")}>
+          In cart <span className="num ml-1">{allItems.length - neededCount}</span>
         </button>
       </div>
       </div>

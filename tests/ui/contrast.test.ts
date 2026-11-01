@@ -67,8 +67,6 @@ const pairs: Array<[string, string, number, string]> = [
   ["danger", "danger-soft", 4.5, "Delete receipt"],
   ["danger", "surface", 4.5, "destructive text on cards"],
   ["on-danger", "danger-fill", 4.5, "text on filled destructive buttons"],
-  ["warn-ink", "warn-surface", 4.5, "over-budget row"],
-  ["warn-label", "warn-surface", 4.5, "over-budget label"],
   ["warn-label", "app", 4.5, "invalid-amount message in the budget sheet"],
   ["input-border", "app", 3, "field and checkbox outlines on the canvas"],
   ["input-border", "surface", 3, "field and checkbox outlines on cards"],
