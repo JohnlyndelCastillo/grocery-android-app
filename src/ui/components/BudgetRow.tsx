@@ -16,14 +16,14 @@ export function BudgetRow({ budgetText, status, over, onOpen }: BudgetRowProps) 
   return (
     <button
       id="budget-row"
-      className={`mb-3 flex min-h-[3.25rem] w-full items-center justify-between gap-3 rounded-[14px] border px-4 text-left ${over ? "border-[var(--color-budget-border)] bg-[var(--color-budget-surface)] text-[var(--color-budget-ink)]" : "border-[var(--color-budget-neutral-border)] bg-[var(--color-surface)] text-ink"}`}
+      className={`mb-3 flex min-h-[3.25rem] w-full items-center justify-between gap-3 rounded-[14px] border px-4 text-left ${over ? "border-[var(--color-warn-border)] bg-[var(--color-warn-surface)] text-[var(--color-warn-ink)]" : "border-[var(--color-line)] bg-[var(--color-surface)] text-ink"}`}
       type="button"
       onClick={onOpen}
     >
       <span className="min-w-0 text-[.95rem] font-semibold">
-        {budgetText === null ? "Set a daily budget" : <>Today’s budget <span className={`font-normal ${over ? "" : "text-muted"}`}>{budgetText}</span></>}
+        {budgetText === null ? "Set a daily budget" : <>Today’s budget <span className={`num font-normal ${over ? "" : "text-muted"}`}>{budgetText}</span></>}
       </span>
-      <span className={`flex shrink-0 items-center gap-1 text-[.88rem] font-bold ${over ? "" : "text-green"}`}>
+      <span className={`num flex shrink-0 items-center gap-1 text-[.88rem] font-bold ${over ? "" : "text-green"}`}>
         <span id="budget-status">{status}</span>
         {chevron}
       </span>

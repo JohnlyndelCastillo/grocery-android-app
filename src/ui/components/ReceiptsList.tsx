@@ -1,5 +1,5 @@
 import type { Receipt } from "../../domain/types";
-import { currencyFormatter, formatReceiptDate } from "../format";
+import { formatReceiptDate, makeMoney } from "../format";
 import { SettingsGroup, SettingsRow } from "./SettingsGroup";
 
 interface ReceiptsListProps {
@@ -30,7 +30,7 @@ export function ReceiptsList({ receipts, onOpen }: ReceiptsListProps) {
                   <span className="block text-[.95rem] text-[var(--color-settings-ink)]">{formatReceiptDate(receipt.finishedAt)}</span>
                   <span className="block text-[.78rem] text-muted">{count} {count === 1 ? "item" : "items"}</span>
                 </span>
-                <strong className="whitespace-nowrap text-[.95rem] text-green-dark">{currencyFormatter(receipt.currency).format(receipt.total)}</strong>
+                <strong className="num whitespace-nowrap text-[.95rem] text-green-dark">{makeMoney(receipt.currency).format(receipt.total)}</strong>
               </SettingsRow>
             </li>
           );

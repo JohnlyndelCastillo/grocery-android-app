@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { version } from "../../../package.json";
 import type { CurrencyCode, Receipt } from "../../domain/types";
-import { currencyFormatter, currencySymbol } from "../format";
 import type { SettingsView } from "../types";
 import { ReceiptDetail } from "./ReceiptDetail";
 import { ReceiptsList } from "./ReceiptsList";
@@ -155,7 +154,7 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
           <SettingsRow id="open-currency" onClick={() => leaveForward(onOpenCurrency)}>
             <span>Currency</span>
             <span className="flex items-center gap-2">
-              <span id="currency-value" className="text-[.88rem] text-muted">{currency} ({currencySymbol(currencyFormatter(currency)) || currency})</span>
+              <span id="currency-value" className="text-[.88rem] text-muted">{currency}</span>
               {chevron}
             </span>
           </SettingsRow>

@@ -96,7 +96,7 @@ describe("collapsing header", () => {
     scrollTo(120);
     expect(header.dataset.compact).toBe("true");
     expect(q("#compact-summary").getAttribute("aria-hidden")).toBe("false");
-    expect(q("#compact-summary").textContent).toContain("100.00"); // the cart total, in one line
+    expect(q("#compact-summary").textContent).toContain("PHP\u00a0100"); // the cart total, in one line
     expect(q("#cart-card").closest('[aria-hidden="true"]')).not.toBeNull(); // the big cards are hidden from screen readers
 
     scrollTo(30); // part-way up: still compact, so it doesn't flicker
