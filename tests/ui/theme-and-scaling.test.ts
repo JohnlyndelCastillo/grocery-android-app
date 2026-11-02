@@ -88,6 +88,22 @@ describe("theme and responsive scaling foundations", () => {
     for (const token of deleted) expect(sources, `--color-${token}`).not.toContain(`--color-${token}`);
   });
 
+  it("draws every checkbox 24px with a 6px radius, including Mark all, Select all and the in-between state", () => {
+    expect(stylesheet).toMatch(/li input\[type="checkbox"\], #check-all, #select-all \{[^}]*width: 24px;[^}]*height: 24px;[^}]*border-radius: 6px/);
+    expect(stylesheet).toContain("#check-all:indeterminate");
+    expect(stylesheet).toContain("#select-all:indeterminate");
+  });
+
+  it("builds the quantity control from three 48px areas and keeps its focus ring visible", () => {
+    expect(stylesheet).toMatch(/\.quantity-control \.qty \{[^}]*width: 48px;[^}]*height: 48px/);
+    expect(stylesheet).toContain(".quantity-control:focus-within");
+  });
+
+  it("does not fade checked rows: no li.done styles and no checked-row tokens", () => {
+    expect(stylesheet).not.toMatch(/li\.done/);
+    for (const token of ["checked-surface", "checked-muted", "checked-subtle"]) expect(stylesheet).not.toContain(`--color-${token}`);
+  });
+
   it("sets the browser chrome colors and lets the viewport resize with the keyboard", () => {
     const html = readFileSync(resolve(projectRoot, "index.html"), "utf8");
     expect(html).toContain('content="#f4f6f2" media="(prefers-color-scheme: light)"');

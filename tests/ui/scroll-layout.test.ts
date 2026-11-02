@@ -52,7 +52,7 @@ describe("page scrolling", () => {
     const { q, root } = setup();
     const scrollers = root.querySelectorAll('#home-page [class*="overflow-y-auto"], #home-page [class*="overflow-auto"]');
     expect([...scrollers]).toEqual([q("#home-page main")]);
-    expect(q("#list").className).not.toMatch(/max-h|overflow/);
+    expect(q("#list").className).not.toMatch(/max-h|overflow-(y-|x-)?(auto|scroll)/); // overflow-hidden only clips the rounded corners
   });
 
   it("the tabs sit in a sticky wrapper inside the scrolling page", () => {
