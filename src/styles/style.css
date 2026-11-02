@@ -39,13 +39,9 @@
   --color-checkmark: var(--color-on-action);
   --color-focus: var(--color-green);
   --color-tab-active: var(--color-surface);
-  --color-checked-surface: var(--color-surface);
-  --color-checked-muted: var(--color-ink);
-  --color-checked-subtle: var(--color-muted);
   --color-checkbox-border: var(--color-input-border);
   --color-selection-border: var(--color-input-border);
   --color-selection: var(--color-green);
-  --color-danger-hover: var(--color-danger);
   --color-danger-border: var(--color-danger-soft);
   --color-danger-fill: var(--color-danger);
   --color-settings-border: var(--color-line);
@@ -66,7 +62,6 @@
   --color-icon-muted: var(--color-muted);
   --color-icon-subtle: var(--color-muted);
   --color-version-muted: var(--color-muted);
-  --color-item-muted: var(--color-muted);
   --color-dialog-button: var(--color-track);
 
   /* Snackbars keep a dark surface in both modes. */
@@ -175,39 +170,64 @@ body { min-width: 320px; background: var(--color-app); }
 .list-tab { transition: color .22s ease; }
 .list-tab[aria-selected="true"] { color: var(--color-ink); }
 
-li.done { background: var(--color-checked-surface); }
-li.done .name { color: var(--color-checked-muted); text-decoration: line-through; }
-li.done .item-subtotal { color: var(--color-checked-subtle); }
-li.done .swipe-content { background: var(--color-checked-surface); }
-li input[type="checkbox"] {
+/* A checked row only strikes its name through (that class is set on the name itself). Nothing is faded. */
+li input[type="checkbox"], #check-all, #select-all {
   appearance: none;
-  flex: 0 0 1.375rem;
-  width: 1.375rem;
-  height: 1.375rem;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   margin: 0;
   border: 1.7px solid var(--color-checkbox-border);
-  border-radius: .4375rem;
+  border-radius: 6px;
   background: var(--color-surface);
   cursor: pointer;
 }
 li input[type="checkbox"].select-item { border-color: var(--color-selection-border); }
 li input[type="checkbox"].select-item:checked { border-color: var(--color-selection); background: var(--color-selection); }
-li input[type="checkbox"]:checked:not(.select-item) { border-color: var(--color-green-fill); background: var(--color-green-fill); }
-li input[type="checkbox"]:checked::after {
+li input[type="checkbox"]:checked:not(.select-item), #check-all:checked, #select-all:checked,
+#check-all:indeterminate, #select-all:indeterminate { border-color: var(--color-green-fill); background: var(--color-green-fill); }
+li input[type="checkbox"]:checked::after, #check-all:checked::after, #select-all:checked::after,
+#check-all:indeterminate::after, #select-all:indeterminate::after {
   display: block;
   color: var(--color-checkmark);
-  font-size: .9375rem;
+  font-size: 1rem;
   font-weight: 700;
-  line-height: 1.1875rem;
+  line-height: calc(24px - 3.4px);
   text-align: center;
   content: "✓";
 }
+#check-all:indeterminate::after, #select-all:indeterminate::after { content: "–"; }
 
 .name { overflow-wrap: anywhere; }
 .item-details-row { min-width: 0; }
-.quantity-control .qty { width: 1.875rem; min-height: 2.125rem; height: 2.125rem !important; padding: 0 .125rem !important; border: 0 !important; border-radius: .4375rem !important; background: transparent; box-shadow: none !important; }
-.qty-step:hover, .qty-step:active, .qty-step:focus, .qty-step:focus-visible { background: transparent; box-shadow: none; }
-.del:hover { color: var(--color-danger-hover); background: var(--color-danger-soft); }
+.quantity-control .qty { width: 48px; height: 48px; min-height: 48px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.quantity-control:focus-within { outline: 2px solid var(--color-green); outline-offset: 0; }
+.quantity-control .qty:focus { border: 0; outline: none; }
+.quantity-control .qty::-webkit-inner-spin-button, .quantity-control .qty::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.quantity-control .qty { appearance: textfield; }
+.del:hover { color: var(--color-danger); }
+
+/* Grocery row editors */
+.item-details-row {
+  display: grid;
+  grid-template-columns: 144px minmax(0, 1fr) 48px;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 380px) {
+  .item-details-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  }
+
+  .item-details-row .quantity-control {
+    width: 100%;
+  }
+
+  .item-details-row .qty-step {
+    width: 40px;
+  }
+}
 
 @media (hover: hover) and (pointer: fine) { .swipe-delete { display: none; } }
 .settings-page { height: 100vh; height: 100dvh; overscroll-behavior: contain; }
@@ -216,8 +236,6 @@ dialog::backdrop { background: var(--color-scrim); }
 @media (max-width: 380px) {
   #app { padding-right: .8125rem; padding-left: .8125rem; }
   :root { --gutter: .8125rem; }
-  .item-title-row { gap: .4375rem; }
-  .item-details-row { gap: .3125rem; padding-left: 1.8125rem; }
   #add-form button { padding-right: .6875rem; padding-left: .6875rem; }
 }
 

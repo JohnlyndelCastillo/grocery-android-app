@@ -13,7 +13,6 @@ interface ShoppingListProps {
   selectionMode: boolean;
   money: Money;
   pricePlaceholder: string;
-  cartText: string;
   onTabChange(tab: Tab): void;
   onCheckAll(checked: boolean): void;
   onSelectAll(checked: boolean): void;
@@ -25,10 +24,9 @@ interface ShoppingListProps {
   onPrice(id: string, price: number): void;
   onQuickDelete(id: string, name: string): void;
   onSwipeDelete(id: string, name: string): void;
-  onFinishTrip(): void;
 }
 
-export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, cartText, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete, onFinishTrip }: ShoppingListProps) {
+export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: ShoppingListProps) {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const checkAllRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -66,27 +64,27 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
       </div>
       </div>
 
-      <div className="mb-[6px] flex items-center justify-between">
-        <label className="inline-flex min-h-9 items-center gap-2 text-[.82rem] font-semibold text-[var(--color-selection-muted)]">
-          <input ref={checkAllRef} id="check-all" className="size-[1.125rem] accent-green" type="checkbox" checked={allItems.length > 0 && doneCount === allItems.length} onChange={(event) => onCheckAll(event.currentTarget.checked)} />
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <label className="tap inline-flex items-center gap-3 pr-3 text-body font-medium text-[var(--color-selection-muted)]">
+          <input ref={checkAllRef} id="check-all" type="checkbox" checked={allItems.length > 0 && doneCount === allItems.length} onChange={(event) => onCheckAll(event.currentTarget.checked)} />
           Mark all in cart
         </label>
-        <button id="toggle-select" className="min-h-11 rounded-lg bg-transparent px-2 text-[.85rem] font-bold text-green hover:bg-[var(--color-selection-hover)]" type="button" onClick={onToggleSelection}>
+        <button id="toggle-select" className="tap rounded-xl bg-transparent px-3 text-body font-semibold text-ink" type="button" onClick={onToggleSelection}>
           {selectionMode ? "Cancel" : "Select"}
         </button>
       </div>
 
-      <div id="bulk-actions" className="mb-[10px] flex items-center justify-between gap-2 rounded-xl bg-[var(--color-selection-surface)] px-[11px] py-[9px]" hidden={!selectionMode}>
-        <label className="flex items-center gap-[7px] text-[.82rem] font-semibold text-[var(--color-selection-ink)]">
-          <input ref={selectAllRef} id="select-all" className="size-[1.125rem] accent-green" type="checkbox" checked={visibleItems.length > 0 && selectedVisibleCount === visibleItems.length} onChange={(event) => onSelectAll(event.currentTarget.checked)} />
+      <div id="bulk-actions" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--color-selection-surface)] px-3" hidden={!selectionMode}>
+        <label className="tap inline-flex items-center gap-3 text-body font-medium text-[var(--color-selection-ink)]">
+          <input ref={selectAllRef} id="select-all" type="checkbox" checked={visibleItems.length > 0 && selectedVisibleCount === visibleItems.length} onChange={(event) => onSelectAll(event.currentTarget.checked)} />
           Select all to delete
         </label>
-        <button id="delete-selected" className="min-h-[2.125rem] rounded-xl bg-[var(--color-danger-fill)] px-[11px] text-[.78rem] font-bold text-on-danger disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
+        <button id="delete-selected" className="tap rounded-xl bg-[var(--color-danger-fill)] px-4 text-body font-semibold text-on-danger disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
           {selectedIds.size ? `Delete selected (${selectedIds.size})` : "Delete selected"}
         </button>
       </div>
 
-      <ul id="list" className="m-0 list-none p-0">
+      <ul id="list" className="m-0 list-none overflow-hidden rounded-2xl bg-[var(--color-surface)] p-0">
         {visibleItems.map((item) => (
           <GroceryRow
             key={item.id}
@@ -106,20 +104,9 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
           />
         ))}
       </ul>
-      <p id="empty-state" className="m-0 rounded-[15px] border border-dashed border-[var(--color-empty-border)] px-4 py-6 text-center text-[.88rem] text-[var(--color-empty-muted)]" hidden={visibleItems.length > 0}>
-        {activeTab === "needed" ? "Nothing left to shop for. You’re all set!" : "No items in your cart yet."}
+      <p id="empty-state" className="m-0 rounded-2xl border border-dashed border-[var(--color-empty-border)] px-4 py-6 text-center text-body text-[var(--color-empty-muted)]" hidden={visibleItems.length > 0}>
+        {allItems.length === 0 ? "Your list is empty." : activeTab === "needed" ? "Everything is in your cart." : "No items in your cart yet."}
       </p>
-      {activeTab === "cart" && (
-        <button
-            id="finish-trip"
-            className="mt-3 block min-h-[2.875rem] w-full num rounded-xl bg-green-fill font-bold text-on-action disabled:cursor-default disabled:opacity-45"
-            type="button"
-            disabled={doneCount === 0}
-            onClick={onFinishTrip}
-          >
-            Finish trip{doneCount > 0 ? ` · ${cartText}` : ""}
-        </button>
-      )}
     </section>
   );
 }

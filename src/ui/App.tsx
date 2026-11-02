@@ -43,7 +43,7 @@ export function App({ storage }: AppProps) {
   return (
     <>
       <div ref={homePageRef} id="home-page" className="flex h-full min-h-0 flex-col" hidden={settingsView !== "closed"}>
-        <main ref={mainRef} className="-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+4rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+        <main ref={mainRef} className={`-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+4rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] ${list.activeTab === "cart" ? "pb-4" : "pb-[calc(16px+env(safe-area-inset-bottom,0px))]"}`}>
           <Header
             cartTotal={list.cartText}
             overBudget={list.overBudget}
@@ -70,7 +70,6 @@ export function App({ storage }: AppProps) {
               selectionMode={list.selectionMode}
               money={list.money}
               pricePlaceholder={list.currencyLabel}
-              cartText={list.cartText}
               onTabChange={list.changeTab}
               onCheckAll={list.checkAll}
               onSelectAll={list.selectAllVisible}
@@ -85,13 +84,25 @@ export function App({ storage }: AppProps) {
               onPrice={list.setPrice}
               onQuickDelete={list.quickDelete}
               onSwipeDelete={list.requestDeleteOne}
-              onFinishTrip={() => {
-                list.finishTrip();
-                void successTap();
-              }}
             />
           </div>
         </main>
+        {list.activeTab === "cart" && (
+          <footer className="shrink-0 bg-app pb-[max(16px,env(safe-area-inset-bottom,0px))] pt-2">
+            <button
+              id="finish-trip"
+              className="tap num block w-full rounded-xl bg-green-fill px-4 text-body font-semibold text-on-action disabled:cursor-default disabled:opacity-45"
+              type="button"
+              disabled={list.doneCount === 0}
+              onClick={() => {
+                list.finishTrip();
+                void successTap();
+              }}
+            >
+              Finish trip{list.doneCount > 0 ? ` · ${list.cartText}` : ""}
+            </button>
+          </footer>
+        )}
       </div>
 
       <SettingsPage

@@ -118,7 +118,7 @@ describe("grocery app", () => {
     click<HTMLInputElement>("#check-all");
     expect(q("#needed-tab").textContent).toContain("Still needed 0");
     expect(q<HTMLElement>("#empty-state").hidden).toBe(false);
-    expect(q("#empty-state").textContent).toContain("Nothing left to shop for");
+    expect(q("#empty-state").textContent).toBe("Everything is in your cart.");
     click<HTMLButtonElement>("#cart-tab");
     expect(q("#list").textContent).toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
@@ -228,7 +228,7 @@ describe("grocery app", () => {
     });
 
     expect(q(".item-title-row .name").textContent).toBe(longNameItem.name);
-    expect(q(".item-details-row .item-subtotal").textContent).toContain("PHP\u00a090");
+    expect(q(".item-title-row .item-subtotal").textContent).toContain("PHP\u00a090");
     expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...longNameItem, qty: 3 }]);
   });
 
@@ -456,5 +456,119 @@ describe("grocery app", () => {
     expect(fill.className).toContain("transition-transform");
     expect(fill.className).not.toMatch(/transition-\[?width/);
     expect(fill.getAttribute("style")).not.toContain("width");
+  });
+
+  it("lays a row out as checkbox, name and Line total, then labeled editors, then remove", () => {
+    const { q } = setup([rice]);
+    const li = q("#list li");
+    expect(li.querySelector(".item-title-row .name")!.textContent).toBe("Rice");
+    expect(li.querySelector(".item-title-row .item-subtotal")!.textContent).toBe("Line totalPHP\u00a0100");
+    const editors = li.querySelector(".item-details-row")!;
+    expect(editors.textContent).toContain("Quantity");
+    expect(editors.textContent).toContain("Unit price · PHP");
+    expect(editors.querySelector(".quantity-control .qty")).not.toBeNull();
+    expect(editors.querySelector(".price")).not.toBeNull();
+    expect(editors.querySelector(".del")).not.toBeNull(); // remove has its own area, last in the row
+    expect(editors.lastElementChild).toBe(editors.querySelector(".del"));
+  });
+
+  it("puts the rows in one card with dividers, not separate cards", () => {
+    const { q } = setup([rice, eggs]);
+    expect(q("#list").className).toContain("rounded-2xl");
+    expect(q("#list").className).toContain("bg-[var(--color-surface)]");
+    const row = q("#list li").className;
+    expect(row).toContain("border-b");
+    expect(row).not.toMatch(/\bmb-|rounded-\[|shadow-|\bborder\b(?!-)/); // no gap, own radius, shadow or full border
+  });
+
+  it("gives every row control a 48dp target: checkbox, the three quantity areas, price and remove", () => {
+    const { q } = setup([rice]);
+    expect(q(".item-check").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q(".select-item").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q(".quantity-control").className).toContain("w-[144px]"); // 48 + 48 + 48
+    expect(q(".quantity-control").className).toContain("h-[48px]");
+    for (const step of document.querySelectorAll(".qty-step")) expect(step.className).toContain("h-[48px] w-[48px]");
+    expect(q(".qty").className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q(".qty").className).toContain("w-[48px]");
+    expect(q(".del").className).toMatch(/(^|\s)tap(\s|$)/);
+  });
+
+  it("lets the editors wrap so they stack at 320dp or large text, with remove staying in its own area", () => {
+    const { q } = setup([rice]);
+    expect(q(".item-details-row").className).toContain("flex-wrap");
+    expect(q(".price").parentElement!.className).toContain("min-w-[128px]");
+    expect(q(".price").parentElement!.className).toContain("flex-1");
+    expect(q(".del").className).toContain("shrink-0");
+  });
+
+  it("uses a numeric keypad for quantity and a decimal one for price, and right-aligns the numbers", () => {
+    const { q } = setup([rice]);
+    expect(q<HTMLInputElement>(".qty").inputMode).toBe("numeric");
+    expect(q<HTMLInputElement>(".price").inputMode).toBe("decimal");
+    expect(q(".price").className).toContain("text-right");
+    expect(q(".item-subtotal").className).toContain("text-right");
+    expect(q(".item-subtotal strong, .item-subtotal span:last-child").className).toContain("num");
+  });
+
+  it("strikes through the name of a checked item and fades nothing else", () => {
+    const unchecked = setup([rice]);
+    const uncheckedEditors = unchecked.q(".item-details-row").outerHTML;
+    const uncheckedTotal = unchecked.q(".item-subtotal").outerHTML;
+    expect(unchecked.q(".name").className).not.toContain("line-through");
+
+    const checked = setup([{ ...rice, checked: true }]);
+    checked.click<HTMLButtonElement>("#cart-tab");
+    expect(checked.q("#list li").className).toContain("done");
+    expect(checked.q("#list li").className).not.toMatch(/opacity/);
+    expect(checked.q(".name").className).toContain("line-through");
+    expect(checked.q(".name").className).not.toMatch(/opacity|muted/);
+    expect(checked.q(".item-details-row").outerHTML).toBe(uncheckedEditors); // quantity, price and remove look identical
+    expect(checked.q(".item-subtotal").outerHTML).toBe(uncheckedTotal);
+  });
+
+  it("keeps Mark all in cart and Select as 48dp targets", () => {
+    const { q } = setup([rice]);
+    expect(q("#check-all").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q("#check-all").closest("label")!.textContent).toContain("Mark all in cart"); // the whole label is the target
+    expect(q("#toggle-select").className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q("#toggle-select").textContent).toBe("Select");
+  });
+
+  it("says why the list is empty: no items, everything in the cart, or nothing in the cart yet", () => {
+    const none = setup();
+    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
+    none.click<HTMLButtonElement>("#cart-tab");
+    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
+    expect(none.q("#needed-tab").textContent).toBe("Still needed 0"); // honest counts, and both tabs stay
+
+    const some = setup([rice]);
+    some.click<HTMLButtonElement>("#cart-tab");
+    expect(some.q<HTMLElement>("#empty-state").hidden).toBe(false);
+    expect(some.q("#empty-state").textContent).toBe("No items in your cart yet.");
+
+    const allIn = setup([{ ...rice, checked: true }]);
+    expect(allIn.q("#empty-state").textContent).toBe("Everything is in your cart.");
+  });
+
+  it("pins Finish trip in a footer, only on In cart, so the list scrolls above it", () => {
+    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
+    expect(document.querySelector("footer")).toBeNull(); // Still needed: no footer at all
+    click<HTMLButtonElement>("#cart-tab");
+    const footer = q("footer");
+    expect(footer.contains(q("#finish-trip"))).toBe(true);
+    expect(q("#home-page main").contains(footer)).toBe(false); // outside the scroller, so it never covers the last row
+    expect(q("#finish-trip").textContent).toBe("Finish trip · PHP\u00a0100"); // the total stays in the label
+    expect(q("#finish-trip").className).toMatch(/(^|\s)tap(\s|$)/);
+    expect(q("#finish-trip").className).toContain("w-full");
+    expect(footer.className).toContain("env(safe-area-inset-bottom");
+    click<HTMLButtonElement>("#needed-tab");
+    expect(document.querySelector("footer")).toBeNull();
+  });
+
+  it("shows plain 'Finish trip' and disables it while the cart is empty", () => {
+    const { q, click } = setup([rice]);
+    click<HTMLButtonElement>("#cart-tab");
+    expect(q("#finish-trip").textContent).toBe("Finish trip");
+    expect(q<HTMLButtonElement>("#finish-trip").disabled).toBe(true);
   });
 });
