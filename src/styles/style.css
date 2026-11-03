@@ -29,8 +29,6 @@
   --color-on-danger: #ffffff; /* Text and icons on a Destructive fill */
   --color-scrim: #10111c66; /* #10111C at 40%, flat, in both modes */
 
-  /* Orange text for an invalid amount in the budget sheet. Replaced by Destructive text in Batch 4. */
-  --color-warn-label: #a04e35;
 
   /* Names components still use, now pointing at a role so each role has one value.
      Each batch deletes the ones whose components it rebuilds. */
@@ -51,7 +49,6 @@
   --color-empty-muted: var(--color-muted);
   --color-budget-muted: var(--color-muted);
   --color-sheet-handle: var(--color-input-border);
-  --color-sheet-label: var(--color-ink);
   --color-tabs-surface: var(--color-track);
   --color-tabs-muted: var(--color-muted);
   --color-quantity-surface: var(--color-track);
@@ -258,27 +255,27 @@ dialog::backdrop { background: var(--color-scrim); }
 /* Today's Budget bottom-sheet transitions */
 #budget-sheet {
   opacity: 0;
-  transform: translateY(16px) scale(0.985);
+  transform: translateY(16px);
 
   transition:
-    opacity 220ms ease-out,
-    transform 220ms ease-out,
-    display 220ms allow-discrete,
-    overlay 220ms allow-discrete;
+    opacity 160ms ease-out,
+    transform 160ms ease-out,
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
 
   transition-behavior: allow-discrete;
 }
 
 #budget-sheet[open] {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 /* Initial state when the dialog enters the top layer */
 @starting-style {
   #budget-sheet[open] {
     opacity: 0;
-    transform: translateY(16px) scale(0.985);
+    transform: translateY(16px);
   }
 }
 
@@ -287,9 +284,9 @@ dialog::backdrop { background: var(--color-scrim); }
   background-color: #10111c00;
 
   transition:
-    background-color 220ms ease-out,
-    display 220ms allow-discrete,
-    overlay 220ms allow-discrete;
+    background-color 160ms ease-out,
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
 
   transition-behavior: allow-discrete;
 }
@@ -331,8 +328,6 @@ dialog::backdrop { background: var(--color-scrim); }
     --color-danger: #ff9ca6;
     --color-danger-soft: #42272e;
     --color-on-danger: #141a16;
-
-          --color-warn-label: #f0a184;
 
     --color-toast: #2c382f;
     --color-card-shadow: #00000030;
