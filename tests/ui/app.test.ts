@@ -378,7 +378,7 @@ describe("grocery app", () => {
       input.value = "80";
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    expect(q("#budget-preview").textContent).toContain("PHP\u00a020 over");
+    expect(q("#budget-preview").textContent).toBe("Over byPHP\u00a020");
   });
 
   it("shows the summary card: cart, planned, today's budget and what is left", () => {

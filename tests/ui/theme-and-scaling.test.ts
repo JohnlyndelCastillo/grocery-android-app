@@ -88,6 +88,21 @@ describe("theme and responsive scaling foundations", () => {
     for (const token of deleted) expect(sources, `--color-${token}`).not.toContain(`--color-${token}`);
   });
 
+  it("animates the budget sheet with opacity and transform only, in 120-180ms, and not at all with reduced motion", () => {
+    const block = stylesheet.slice(stylesheet.indexOf("#budget-sheet {"), stylesheet.indexOf("#budget-sheet[open] {"));
+    expect(block).toMatch(/opacity 160ms/);
+    expect(block).toMatch(/transform 160ms/);
+    expect(block).not.toMatch(/height|width|padding|margin|top|bottom/); // no layout properties
+    expect(stylesheet).not.toContain("220ms");
+    expect(stylesheet).not.toMatch(/translateY\(16px\) scale/);
+    expect(stylesheet).toMatch(/prefers-reduced-motion: reduce\) \{\s*#budget-sheet,\s*#budget-sheet::backdrop \{\s*transition: none/);
+  });
+
+  it("has no orange token left: invalid amounts use Destructive text", () => {
+    expect(stylesheet).not.toMatch(/--color-warn/);
+    expect(stylesheet).not.toContain("--color-sheet-label");
+  });
+
   it("draws every checkbox 24px with a 6px radius, including Mark all, Select all and the in-between state", () => {
     expect(stylesheet).toMatch(/li input\[type="checkbox"\], #check-all, #select-all \{[^}]*width: 24px;[^}]*height: 24px;[^}]*border-radius: 6px/);
     expect(stylesheet).toContain("#check-all:indeterminate");
