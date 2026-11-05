@@ -194,7 +194,7 @@ describe("grocery app", () => {
     click<HTMLButtonElement>("#open-about");
     expect(q("#settings-title").textContent).toBe("About");
     expect(q("#about-page").textContent).toContain(`v${version}`);
-    expect(q<HTMLButtonElement>("#close-settings").textContent).toContain("Settings");
+    expect(q("#close-settings").getAttribute("aria-label")).toContain("Settings");
     expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`);
     click<HTMLButtonElement>("#close-settings");
     expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
@@ -286,7 +286,7 @@ describe("grocery app", () => {
     expect(q("#receipt-detail").textContent).toContain("2 × ");
     expect(q("#receipt-detail").textContent).not.toContain("Eggs");
     expect(q("#receipt-total").textContent).toContain("PHP\u00a0100");
-    expect(q("#receipt-budget").textContent).toContain("PHP\u00a050 left");
+    expect(q("#receipt-budget").textContent).toContain("Left for todayPHP\u00a050");
 
     click<HTMLButtonElement>("#close-settings"); // back to the receipts list
     expect(q("#settings-title").textContent).toBe("Receipts");
@@ -307,7 +307,7 @@ describe("grocery app", () => {
     click<HTMLButtonElement>("#open-settings");
     expect(q("#receipts-count")).toBeNull();
     click<HTMLButtonElement>("#open-receipts");
-    expect(q("#receipts-empty").textContent).toContain("Finish trip");
+    expect(q("#receipts-empty").textContent).toBe("No receipts yet.");
   });
 
   it("deletes a receipt only after confirming", () => {
