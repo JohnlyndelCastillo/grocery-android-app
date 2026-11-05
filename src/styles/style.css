@@ -56,16 +56,13 @@
   --color-selection-hover: var(--color-track);
   --color-selection-surface: var(--color-track);
   --color-selection-ink: var(--color-ink);
-  --color-icon-muted: var(--color-muted);
   --color-icon-subtle: var(--color-muted);
-  --color-version-muted: var(--color-muted);
   --color-dialog-button: var(--color-track);
 
   /* Snackbars keep a dark surface in both modes. */
   --color-toast: #202b24;
   --color-action-accent: #91d5a9;
   --color-black-20: #0003;
-  --color-card-shadow: #263d2d08;
 
   --gutter: clamp(.8125rem, 4.5vw, 1.125rem); /* keep in sync with the #app padding below */
   --bar-h: calc(4rem + env(safe-area-inset-top, 0px)); /* a 48dp button with 8dp above and below */
@@ -126,6 +123,20 @@ body { min-width: 320px; background: var(--color-app); }
     content: "";
   }
   button:active:not(:disabled)::after { opacity: .08; }
+  /* Link rows (like "What's new") are pressed the same way. An overlay with opacity, not a color-mix background:
+     the build rewrites those into a solid fallback for older browsers, which would flash the row on press. */
+  a.settings-row { position: relative; }
+  a.settings-row::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .1s ease;
+    content: "";
+  }
+  a.settings-row:active::after { opacity: .08; }
   :focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
   input:not([type="checkbox"]) {
     min-height: 3rem;
@@ -330,6 +341,5 @@ dialog::backdrop { background: var(--color-scrim); }
     --color-on-danger: #141a16;
 
     --color-toast: #2c382f;
-    --color-card-shadow: #00000030;
   }
 }
