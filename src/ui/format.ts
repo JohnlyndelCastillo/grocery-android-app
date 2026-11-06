@@ -35,16 +35,6 @@ export function budgetMessage(s: BudgetStatus, format: Money): string {
   }
 }
 
-// Short form for the one-line budget row: "PHP 400 left", "PHP 20 over", "On budget".
-export function budgetShort(s: BudgetStatus, format: Money): string {
-  switch (s.state) {
-    case "none": return "";
-    case "over": return format.format(s.amount) + " over";
-    case "exact": return "On budget";
-    case "left": return format.format(s.amount) + " left";
-  }
-}
-
 // "Oct 30, 2026, 3:45 PM" in the phone's own locale.
 export function formatReceiptDate(iso: string): string {
   const date = new Date(iso);

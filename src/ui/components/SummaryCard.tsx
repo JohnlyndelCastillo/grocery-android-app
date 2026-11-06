@@ -53,7 +53,7 @@ export function SummaryCard({ cartTotal, plannedTotal, budget, status, money, sc
 
       <button
         id="budget-row"
-        className="tap flex w-full items-center justify-between gap-3 rounded-none border-t border-[var(--color-line)] bg-transparent px-4 py-3 text-left text-ink"
+        className="tap flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-none border-t border-[var(--color-line)] bg-transparent px-4 py-3 text-left text-ink"
         type="button"
         onClick={onOpenBudget}
       >
@@ -61,7 +61,7 @@ export function SummaryCard({ cartTotal, plannedTotal, budget, status, money, sc
           <span className="block text-label text-muted">Today’s budget</span>
           <span className="num block text-body font-semibold">{budget === null ? "Not set" : money.format(budget)}</span>
         </span>
-        <span className="flex shrink-0 items-center gap-1 text-right">
+        <span className="ml-auto flex shrink-0 items-center gap-1 text-right">
           <span id="budget-status">{remaining}</span>
           {chevron}
         </span>

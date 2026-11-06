@@ -15,14 +15,14 @@ const settingsGroup = readFileSync(
 );
 
 describe("theme and responsive scaling foundations", () => {
-  it("keeps the app constrained to the intended 320px–620px layout range", () => {
+  it("keeps the app in a 320px to 600px content column", () => {
     expect(stylesheet).toMatch(/min-width:\s*320px/);
-    expect(stylesheet).toMatch(/width:\s*min\(100%,\s*620px\)/);
+    expect(stylesheet).toMatch(/width:\s*min\(100%,\s*calc\(600px \+ 2 \* var\(--gutter\)\)\)/);
   });
 
   it("uses rem-based root sizing and scalable app gutters", () => {
     expect(stylesheet).toMatch(/font-size:\s*100%/);
-    expect(stylesheet).toMatch(/padding:\s*0\s+clamp\(/);
+    expect(stylesheet).toMatch(/padding:\s*0\s+var\(--gutter\)/);
   });
 
   it("points the repeated settings surfaces at the shared divider and control-track roles", () => {

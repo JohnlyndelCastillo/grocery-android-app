@@ -38,13 +38,6 @@ describe("useGroceryList: derived values", () => {
     expect(result.current.visibleItems.map((i) => i.name)).toEqual(["Rice"]);
   });
 
-  it("gives a short budget status for the one-line row", () => {
-    expect(setup([rice, eggs], 150).result.current.budgetShortText).toContain("PHP\u00a050 left");
-    expect(setup([rice, eggs], 50).result.current.budgetShortText).toContain("PHP\u00a050 over");
-    expect(setup([rice, eggs], 100).result.current.budgetShortText).toBe("On budget");
-    expect(setup([rice, eggs], null).result.current.budgetShortText).toBe("");
-  });
-
   it("reports over budget once the cart passes the budget", () => {
     expect(setup([rice, eggs], 150).result.current.overBudget).toBe(false);
     expect(setup([rice, eggs], 50).result.current.overBudget).toBe(true);
