@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import type { GroceryStorage } from "../storage/storage";
 import { AddItemForm } from "./components/AddItemForm";
-import { BudgetRow } from "./components/BudgetRow";
 import { BudgetSheet } from "./components/BudgetSheet";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { Header } from "./components/Header";
 import { NoticeBanner } from "./components/NoticeBanner";
 import { SettingsPage } from "./components/SettingsPage";
+import { SummaryCard } from "./components/SummaryCard";
 import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
+import { useBackButton } from "./hooks/useBackButton";
 import { useGroceryList } from "./hooks/useGroceryList";
 import { lightTap, successTap } from "./haptics";
 import { parentView, type SettingsView } from "./types";
@@ -27,6 +28,33 @@ export function App({ storage }: AppProps) {
   const homePageRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
+  // Android Back, from the most recent thing on screen to the oldest: a sheet or dialog, then a screen in
+  // Settings (Receipt > Receipts > Settings > Home), then select mode. Home with nothing open sends the app
+  // to the background.
+  useBackButton(() => {
+    if (budgetOpen) {
+      setBudgetOpen(false);
+      return true;
+    }
+    if (confirmReceiptDelete) {
+      setConfirmReceiptDelete(false);
+      return true;
+    }
+    if (list.pendingDelete) {
+      list.cancelDelete();
+      return true;
+    }
+    if (settingsView !== "closed") {
+      setSettingsView(parentView(settingsView));
+      return true;
+    }
+    if (list.selectionMode) {
+      list.toggleSelectionMode();
+      return true;
+    }
+    return false;
+  });
+
   function animateHomePageIn() {
     const page = homePageRef.current;
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -43,20 +71,22 @@ export function App({ storage }: AppProps) {
   return (
     <>
       <div ref={homePageRef} id="home-page" className="flex h-full min-h-0 flex-col" hidden={settingsView !== "closed"}>
-        <main ref={mainRef} className="-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+3.5rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] pb-[calc(22px+env(safe-area-inset-bottom,0px))]">
+        <main ref={mainRef} className={`-mx-[var(--gutter)] min-h-0 flex-1 scroll-pt-[calc(var(--bar-h)+4rem)] overflow-y-auto [overscroll-behavior-y:contain] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] px-[var(--gutter)] ${list.activeTab === "cart" ? "pb-4" : "pb-[calc(16px+env(safe-area-inset-bottom,0px))]"}`}>
           <Header
             cartTotal={list.cartText}
-            plannedTotal={list.plannedText}
             overBudget={list.overBudget}
             scrollerRef={mainRef}
             onOpenSettings={() => setSettingsView("settings")}
           />
-          <div className="pt-[19px]">
-            <BudgetRow
-              budgetText={list.dailyBudget === null ? null : list.money.format(list.dailyBudget)}
-              status={list.budgetShortText}
-              over={list.overBudget}
-              onOpen={() => setBudgetOpen(true)}
+          <div className="pt-2">
+            <SummaryCard
+              cartTotal={list.cartText}
+              plannedTotal={list.plannedText}
+              budget={list.dailyBudget}
+              status={list.budgetStatus}
+              money={list.money}
+              scrollerRef={mainRef}
+              onOpenBudget={() => setBudgetOpen(true)}
             />
             <AddItemForm onAdd={list.addItem} />
             <ShoppingList
@@ -68,7 +98,6 @@ export function App({ storage }: AppProps) {
               selectionMode={list.selectionMode}
               money={list.money}
               pricePlaceholder={list.currencyLabel}
-              cartText={list.cartText}
               onTabChange={list.changeTab}
               onCheckAll={list.checkAll}
               onSelectAll={list.selectAllVisible}
@@ -83,13 +112,25 @@ export function App({ storage }: AppProps) {
               onPrice={list.setPrice}
               onQuickDelete={list.quickDelete}
               onSwipeDelete={list.requestDeleteOne}
-              onFinishTrip={() => {
-                list.finishTrip();
-                void successTap();
-              }}
             />
           </div>
         </main>
+        {list.activeTab === "cart" && (
+          <footer className="shrink-0 bg-app pb-[max(16px,env(safe-area-inset-bottom,0px))] pt-2">
+            <button
+              id="finish-trip"
+              className="tap num block w-full rounded-xl bg-green-fill px-4 text-body font-semibold text-on-action disabled:cursor-default disabled:opacity-45"
+              type="button"
+              disabled={list.doneCount === 0}
+              onClick={() => {
+                list.finishTrip();
+                void successTap();
+              }}
+            >
+              Finish trip{list.doneCount > 0 ? ` · ${list.cartText}` : ""}
+            </button>
+          </footer>
+        )}
       </div>
 
       <SettingsPage

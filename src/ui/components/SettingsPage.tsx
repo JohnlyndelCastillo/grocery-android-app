@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef } from "react";
 import { version } from "../../../package.json";
 import type { CurrencyCode, Receipt } from "../../domain/types";
-import { currencyFormatter, currencySymbol } from "../format";
 import type { SettingsView } from "../types";
 import { ReceiptDetail } from "./ReceiptDetail";
 import { ReceiptsList } from "./ReceiptsList";
-import { SettingsGroup, SettingsRow } from "./SettingsGroup";
+import { ChevronIcon, SettingsGroup, SettingsRow } from "./SettingsGroup";
 
 interface SettingsPageProps {
   view: SettingsView;
@@ -32,7 +31,6 @@ const currencyOptions: { code: CurrencyCode; label: string }[] = [
   { code: "VND", label: "Vietnamese đồng (VND)" },
   { code: "USD", label: "US dollar (USD)" },
 ];
-const chevron = <svg className="size-5 text-[var(--color-icon-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -124,47 +122,47 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
     <section
       ref={pageRef}
       id="settings-page"
-      className="settings-page fixed inset-0 z-20 h-[100vh] h-[100dvh] min-h-0 overflow-y-auto bg-app px-5 pb-[calc(28px+env(safe-area-inset-bottom,0px))] pt-[env(safe-area-inset-top,0px)] [overscroll-behavior:contain]"
+      className="settings-page fixed inset-0 z-20 h-[100vh] h-[100dvh] min-h-0 overflow-y-auto bg-app px-4 pb-[calc(24px+env(safe-area-inset-bottom,0px))] pt-[env(safe-area-inset-top,0px)] [overscroll-behavior:contain]"
       aria-labelledby="settings-title"
       hidden={view === "closed"}
     >
-      <header className="mx-auto flex w-full max-w-[584px] flex-col items-start border-b border-[var(--color-settings-border)] py-3 pb-4">
+      {/* Same header on every screen: a 48dp back button and the title, on one row. */}
+      <header className="mx-auto flex min-h-16 w-full max-w-[600px] items-center gap-2">
         <button
           id="close-settings"
-          className="inline-flex items-center gap-1 rounded-lg bg-transparent py-[7px] pl-1 pr-[10px] text-[.85rem] font-bold text-green"
+          className="tap grid shrink-0 place-items-center rounded-xl bg-transparent p-0 text-ink"
           type="button"
           aria-label={view === "settings" ? "Back to grocery list" : `Back to ${backLabels[view]}`}
           onClick={handleClose}
         >
-          <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m15 18-6-6 6-6" />
+          <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          <span>{backLabels[view]}</span>
         </button>
-        <h1 id="settings-title" className="mb-0 ml-1 mt-[30px] text-2xl font-bold text-ink">{titles[view]}</h1>
+        <h1 id="settings-title" className="m-0 min-w-0 text-title font-bold text-ink">{titles[view]}</h1>
       </header>
-      <div ref={settingsHomeRef} id="settings-home" className="mx-auto w-full max-w-[584px] pt-5" hidden={view !== "settings"}>
+      <div ref={settingsHomeRef} id="settings-home" className="mx-auto w-full max-w-[600px] pt-2" hidden={view !== "settings"}>
         <SettingsGroup>
           <SettingsRow id="open-receipts" onClick={() => leaveForward(onOpenReceipts)}>
             <span>Receipts</span>
             <span className="flex items-center gap-2">
-              {receipts.length > 0 && <span id="receipts-count" className="text-[.8rem] text-muted">{receipts.length}</span>}
-              {chevron}
+              {receipts.length > 0 && <span id="receipts-count" className="num text-body text-muted">{receipts.length}</span>}
+              <ChevronIcon />
             </span>
           </SettingsRow>
           <SettingsRow id="open-currency" onClick={() => leaveForward(onOpenCurrency)}>
             <span>Currency</span>
             <span className="flex items-center gap-2">
-              <span id="currency-value" className="text-[.88rem] text-muted">{currency} ({currencySymbol(currencyFormatter(currency)) || currency})</span>
-              {chevron}
+              <span id="currency-value" className="text-body text-muted">{currency}</span>
+              <ChevronIcon />
             </span>
           </SettingsRow>
           <SettingsRow id="open-about" onClick={() => leaveForward(onOpenAbout)}>
-            <span>About</span>{chevron}
+            <span>About</span><ChevronIcon />
           </SettingsRow>
         </SettingsGroup>
       </div>
-      <div ref={currencyPageRef} id="currency-page" className="mx-auto w-full max-w-[584px] pt-5" hidden={view !== "currency"}>
+      <div ref={currencyPageRef} id="currency-page" className="mx-auto w-full max-w-[600px] pt-2" hidden={view !== "currency"}>
         <div role="radiogroup" aria-label="Currency">
           <SettingsGroup>
             {currencyOptions.map(({ code, label }) => (
@@ -177,23 +175,23 @@ export function SettingsPage({ view, receipts, selectedReceipt, currency, onCurr
             ))}
           </SettingsGroup>
         </div>
-        <p id="currency-note" className="mx-1 mt-3 text-[.82rem] leading-[1.4] text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
+        <p id="currency-note" className="mx-4 mt-3 text-label text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
       </div>
-      <div ref={receiptsPageRef} id="receipts-page" className="mx-auto w-full max-w-[584px]" hidden={view !== "receipts"}>
+      <div ref={receiptsPageRef} id="receipts-page" className="mx-auto w-full max-w-[600px]" hidden={view !== "receipts"}>
         <ReceiptsList receipts={receipts} onOpen={(id) => leaveForward(() => onOpenReceipt(id))} />
       </div>
-      <div ref={receiptPageRef} id="receipt-page" className="mx-auto w-full max-w-[584px]" hidden={view !== "receipt"}>
+      <div ref={receiptPageRef} id="receipt-page" className="mx-auto w-full max-w-[600px]" hidden={view !== "receipt"}>
         <ReceiptDetail receipt={selectedReceipt} onDelete={onDeleteReceipt} />
       </div>
-      <div ref={aboutPageRef} id="about-page" className="about-page mx-auto w-full max-w-[584px] pt-5" hidden={view !== "about"}>
+      <div ref={aboutPageRef} id="about-page" className="about-page mx-auto w-full max-w-[600px] pt-2" hidden={view !== "about"}>
         <SettingsGroup>
           <SettingsRow>
             <span>Version</span>
-            <strong className="text-[.9rem] font-semibold text-[var(--color-version-muted)]">v{version}</strong>
+            <strong className="num text-body font-semibold text-muted">v{version}</strong>
           </SettingsRow>
           <SettingsRow href={releaseUrl}>
             <span>What’s new</span>
-            <svg className="size-5 text-[var(--color-icon-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            <svg className="size-5 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
           </SettingsRow>
         </SettingsGroup>
       </div>

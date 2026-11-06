@@ -22,13 +22,13 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
   }
 
   return (
-    <form id="add-form" className="mb-[25px] flex gap-[9px]" noValidate onSubmit={handleSubmit}>
+    <form id="add-form" className="mb-4 flex flex-wrap gap-2" noValidate onSubmit={handleSubmit}>
       <label className="sr-only" htmlFor="new-name">New grocery item</label>
       <input
         id="new-name"
         ref={inputRef}
-        className={`min-w-0 flex-1 ${invalid ? "invalid" : ""}`}
-        placeholder="What do you need?"
+        className={`min-w-[11rem] flex-1 bg-transparent ${invalid ? "invalid" : ""}`}
+        placeholder="Add an item"
         required
         autoComplete="off"
         aria-invalid={invalid ? "true" : undefined}
@@ -36,8 +36,11 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
           if (event.currentTarget.value.trim()) setInvalid(false);
         }}
       />
-      <button className="min-h-12 shrink-0 whitespace-nowrap rounded-xl bg-green-fill px-[15px] font-bold text-white shadow-[0_4px_10px_var(--color-button-shadow)] hover:bg-green-fill-hover max-[380px]:px-[11px]" type="submit">
-        <span className="mr-[2px] align-[-1px] text-[1.15rem]" aria-hidden="true">＋</span> Add item
+      <button className="tap inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-green-fill px-4 font-semibold text-on-action" type="submit">
+        <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add
       </button>
     </form>
   );

@@ -52,7 +52,7 @@ describe("page scrolling", () => {
     const { q, root } = setup();
     const scrollers = root.querySelectorAll('#home-page [class*="overflow-y-auto"], #home-page [class*="overflow-auto"]');
     expect([...scrollers]).toEqual([q("#home-page main")]);
-    expect(q("#list").className).not.toMatch(/max-h|overflow/);
+    expect(q("#list").className).not.toMatch(/max-h|overflow-(y-|x-)?(auto|scroll)/); // overflow-hidden only clips the rounded corners
   });
 
   it("the tabs sit in a sticky wrapper inside the scrolling page", () => {
@@ -96,7 +96,7 @@ describe("collapsing header", () => {
     scrollTo(120);
     expect(header.dataset.compact).toBe("true");
     expect(q("#compact-summary").getAttribute("aria-hidden")).toBe("false");
-    expect(q("#compact-summary").textContent).toContain("100.00"); // the cart total, in one line
+    expect(q("#compact-summary").textContent).toContain("PHP\u00a0100"); // the cart total, in one line
     expect(q("#cart-card").closest('[aria-hidden="true"]')).not.toBeNull(); // the big cards are hidden from screen readers
 
     scrollTo(30); // part-way up: still compact, so it doesn't flicker
@@ -111,7 +111,7 @@ describe("collapsing header", () => {
     const { q, scrollTo } = setup();
     scrollTo(120);
     expect(q("#open-settings")).not.toBeNull();
-    expect(q("#app-header h1").textContent).toBe("Grocery list");
+    expect(q("#app-header h1").textContent).toBe("Shopping list");
   });
 
   it("the compact summary still says when you're over budget", () => {
