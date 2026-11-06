@@ -29,11 +29,11 @@ export function Header({ cartTotal, overBudget, scrollerRef, onOpenSettings }: H
         <div className="relative flex h-full items-center gap-3 px-[var(--gutter)]">
           <p
             id="compact-summary"
-            className={`num m-0 min-w-0 flex-1 truncate text-body font-semibold transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${compact ? `visible opacity-100 ${overBudget ? "text-[var(--color-danger)]" : "text-ink"}` : "invisible opacity-0"}`}
+            className={`num m-0 flex min-w-0 flex-1 items-baseline text-body font-semibold transition-[opacity,visibility] duration-150 motion-reduce:transition-none ${compact ? `visible opacity-100 ${overBudget ? "text-[var(--color-danger)]" : "text-ink"}` : "invisible opacity-0"}`}
             aria-hidden={!compact}
           >
-            <span className="font-normal text-muted">In your cart · </span>
-            {cartTotal}
+            <span className="min-w-0 truncate font-normal text-muted">In your cart ·&nbsp;</span>
+            <span className="shrink-0">{cartTotal}</span>
             {overBudget && <span className="sr-only"> (over today's budget)</span>}
           </p>
           <button

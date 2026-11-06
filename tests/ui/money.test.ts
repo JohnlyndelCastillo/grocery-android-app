@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { budgetMessage, budgetShort, makeMoney } from "../../src/ui/format";
+import { budgetMessage, makeMoney } from "../../src/ui/format";
 
 const NBSP = "\u00a0";
 
@@ -39,7 +39,5 @@ describe("budget messages", () => {
   it("use the same format", () => {
     expect(budgetMessage({ state: "left", amount: 400 }, php)).toBe(`PHP${NBSP}400 left for today`);
     expect(budgetMessage({ state: "over", amount: 20.5 }, php)).toBe(`PHP${NBSP}20.50 over today’s budget`);
-    expect(budgetShort({ state: "left", amount: 400 }, php)).toBe(`PHP${NBSP}400 left`);
-    expect(budgetShort({ state: "over", amount: 20 }, php)).toBe(`PHP${NBSP}20 over`);
   });
 });

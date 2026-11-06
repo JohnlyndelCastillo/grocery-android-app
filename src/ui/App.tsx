@@ -9,6 +9,7 @@ import { SettingsPage } from "./components/SettingsPage";
 import { SummaryCard } from "./components/SummaryCard";
 import { ShoppingList } from "./components/ShoppingList";
 import { UndoBanner } from "./components/UndoBanner";
+import { useBackButton } from "./hooks/useBackButton";
 import { useGroceryList } from "./hooks/useGroceryList";
 import { lightTap, successTap } from "./haptics";
 import { parentView, type SettingsView } from "./types";
@@ -26,6 +27,33 @@ export function App({ storage }: AppProps) {
   const selectedReceipt = list.receipts.find((r) => r.id === receiptId) ?? null;
   const homePageRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+
+  // Android Back, from the most recent thing on screen to the oldest: a sheet or dialog, then a screen in
+  // Settings (Receipt > Receipts > Settings > Home), then select mode. Home with nothing open sends the app
+  // to the background.
+  useBackButton(() => {
+    if (budgetOpen) {
+      setBudgetOpen(false);
+      return true;
+    }
+    if (confirmReceiptDelete) {
+      setConfirmReceiptDelete(false);
+      return true;
+    }
+    if (list.pendingDelete) {
+      list.cancelDelete();
+      return true;
+    }
+    if (settingsView !== "closed") {
+      setSettingsView(parentView(settingsView));
+      return true;
+    }
+    if (list.selectionMode) {
+      list.toggleSelectionMode();
+      return true;
+    }
+    return false;
+  });
 
   function animateHomePageIn() {
     const page = homePageRef.current;
