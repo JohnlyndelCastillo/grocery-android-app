@@ -45,5 +45,5 @@ coverage/
 docs/*
 !docs/images/
 docs/images/*
-!docs/images/grocery-list.png
+!docs/images/grocery-app-v2.jpeg
 !docs/release-notes.md
