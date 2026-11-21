@@ -1,7 +1,7 @@
 import { act } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Item } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeItem, makeList, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
@@ -10,30 +10,25 @@ beforeAll(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
-const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: false });
+const eggs: Item = makeItem({ id: "2", name: "Eggs", qty: 1, price: 30, checked: false });
 let unmount = () => {};
 
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
 });
 
 function setup(items: Item[]) {
-  const storage: GroceryStorage = {
-    loadItems: () => items,
-    saveItems: vi.fn(),
-    loadDailyBudget: () => null,
-    loadReceipts: () => [],
-    saveReceipts: vi.fn(),
-    saveDailyBudget: vi.fn(),
-  };
+  const test = makeStorage(makeState({ lists: [makeList("My list", items)], activeListId: "list-1" }));
+  window.location.hash = "#/lists/list-1";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
   const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
-  return { q, click };
+  return { q, click, storage: test.storage, saved: test.saved };
 }
 
 describe("regressions", () => {
@@ -46,28 +41,28 @@ describe("regressions", () => {
 
   it("leaves select mode right after a bulk delete", () => {
     const { q, click } = setup([rice, eggs]);
-    click<HTMLButtonElement>("#toggle-select");
-    click<HTMLInputElement>(".select-item");
-    click<HTMLButtonElement>("#delete-selected");
-    click<HTMLButtonElement>("#confirm-delete");
+    click("#toggle-select");
+    click(".select-item");
+    click("#delete-selected");
+    click("#confirm-delete");
     expect(q<HTMLElement>("#bulk-actions").hidden).toBe(true);
     expect(q("#toggle-select").textContent).toBe("Select");
   });
 
   it("says '1 item deleted' (singular) for a one-item bulk delete", () => {
     const { q, click } = setup([rice, eggs]);
-    click<HTMLButtonElement>("#toggle-select");
-    click<HTMLInputElement>(".select-item");
-    click<HTMLButtonElement>("#delete-selected");
-    click<HTMLButtonElement>("#confirm-delete");
+    click("#toggle-select");
+    click(".select-item");
+    click("#delete-selected");
+    click("#confirm-delete");
     expect(q("#undo-message").textContent).toBe("1 item deleted.");
   });
 
   it("brings deleted items back with Undo", () => {
     const { q, click } = setup([rice, eggs]);
-    click<HTMLButtonElement>(".del");
+    click(".del");
     expect(q("#list").textContent).not.toContain("Rice");
-    click<HTMLButtonElement>("#undo-delete");
+    click("#undo-delete");
     expect(q("#list").textContent).toContain("Rice");
   });
 });

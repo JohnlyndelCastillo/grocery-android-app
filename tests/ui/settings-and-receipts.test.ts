@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Receipt } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeReceipt, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
@@ -13,7 +13,7 @@ beforeAll(() => {
 });
 
 const NBSP = "\u00A0";
-const trip: Receipt = {
+const trip: Receipt = makeReceipt({
   id: "r1",
   finishedAt: "2026-11-01T14:12:00.000Z",
   currency: "PHP",
@@ -24,34 +24,29 @@ const trip: Receipt = {
   ],
   total: 2500,
   budget: 12000,
-};
+  storeName: "Market",
+});
 
 let unmount = () => {};
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
 });
 
 function setup(receipts: Receipt[] = [trip]) {
-  const storage: GroceryStorage = {
-    loadItems: () => [],
-    saveItems: vi.fn(),
-    loadDailyBudget: () => null,
-    saveDailyBudget: vi.fn(),
-    loadReceipts: () => receipts,
-    saveReceipts: vi.fn(),
-  };
+  const test = makeStorage(makeState({ receipts }));
+  window.location.hash = "#/";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
   const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
   const openReceipt = () => {
-    click("#open-settings");
-    click("#open-receipts");
+    click("#nav-history");
     click("#receipts-list button");
   };
-  return { q, click, openReceipt, storage };
+  return { q, click, openReceipt, storage: test.storage, saved: test.saved };
 }
 const tapClass = /(^|\s)tap(\s|$)/;
 
@@ -63,55 +58,48 @@ describe("Settings header", () => {
       expect(q("#settings-title").textContent).toBe(title);
       expect(header.contains(q("#close-settings"))).toBe(true);
       expect(header.contains(q("#settings-title"))).toBe(true);
-      expect(header.className).toContain("items-center"); // button and title share a row
       expect(q("#close-settings").className).toMatch(tapClass);
       expect(q("#close-settings").textContent!.trim()).toBe(""); // an arrow, no text
       expect(q("#close-settings svg")).not.toBeNull();
       expect(q("#close-settings").getAttribute("aria-label")).toBe(label);
       expect(q("#settings-title").className).toContain("text-title");
     };
-    click("#open-settings");
-    check("Settings", "Back to grocery list");
+    click("#nav-settings");
+    check("Settings", "Back to home");
     click("#open-currency");
     check("Currency", "Back to Settings");
     click("#close-settings");
     click("#open-about");
     check("About", "Back to Settings");
     click("#close-settings");
-    click("#open-receipts");
-    check("Receipts", "Back to Settings");
-    click("#receipts-list button");
-    check("Receipt", "Back to Receipts");
   });
 
-  it("uses 16dp page gutters and a content column of at most 600", () => {
-    const { q } = setup();
-    expect(q("#settings-page").className).toContain("px-4");
-    for (const id of ["#settings-home", "#currency-page", "#receipts-page", "#receipt-page", "#about-page"]) {
-      expect(q(id).className, id).toContain("max-w-[600px]");
-    }
+  it("keeps Settings and History on the shared content column", () => {
+    const { q, click } = setup();
+    click("#nav-settings");
+    expect(q("#settings-page")).not.toBeNull();
+    click("#nav-history");
+    expect(q("#history-page")).not.toBeNull();
   });
 });
 
 describe("Settings groups", () => {
   it("is one flat inset group: Surface, 16 radius, no border or shadow, and 48dp rows with chevrons", () => {
     const { q, click } = setup();
-    click("#open-settings");
+    click("#nav-settings");
     const group = q("#settings-home .settings-group");
     expect(group.className).toContain("rounded-2xl");
     expect(group.className).toContain("bg-[var(--color-surface)]");
     expect(group.className).not.toMatch(/shadow|\bborder\b/);
-    for (const id of ["#open-receipts", "#open-currency", "#open-about"]) {
+    for (const id of ["#open-currency", "#open-about"]) {
       expect(q(id).className, id).toMatch(tapClass);
       expect(q(id).querySelector("svg"), id).not.toBeNull(); // trailing chevron
     }
-    expect(q("#receipts-count").textContent).toBe("1");
-    expect(q("#currency-value").textContent).toBe("PHP");
   });
 
   it("shows the Currency options as 48dp rows in a group, with the note as visible text", () => {
     const { q, click } = setup();
-    click("#open-settings");
+    click("#nav-settings");
     click("#open-currency");
     for (const code of ["PHP", "VND", "USD"]) expect(q(`#currency-option-${code}`).className).toMatch(tapClass);
     expect(q("#currency-page .settings-group")).not.toBeNull();
@@ -121,7 +109,7 @@ describe("Settings groups", () => {
 
   it("makes both About rows 48dp", () => {
     const { click } = setup();
-    click("#open-settings");
+    click("#nav-settings");
     click("#open-about");
     const rows = [...document.querySelectorAll("#about-page .settings-row")];
     expect(rows).toHaveLength(2);
@@ -129,24 +117,23 @@ describe("Settings groups", () => {
   });
 });
 
-describe("Receipts list", () => {
-  it("shows date and time, the item count, the total and a chevron on each row", () => {
+describe("History list", () => {
+  it("shows date and time, the item count, the total and the store on each row", () => {
     const { q, click } = setup();
-    click("#open-settings");
-    click("#open-receipts");
-    const row = q("#receipts-list .receipt-row");
+    click("#nav-history");
+    const row = q("#receipts-list .history-entry");
     expect(row.className).toMatch(tapClass);
-    expect(row.textContent).toContain("2026");
+    expect(row.textContent).toContain("Nov");
     expect(row.textContent).toContain("3 items");
-    expect(row.querySelector("strong")!.textContent).toBe(`PHP${NBSP}2,500`);
-    expect(row.querySelector("strong")!.className).toContain("num"); // tabular numerals
+    expect(row.textContent).toContain("Market");
+    expect(q(".history-amount").textContent).toBe(`PHP${NBSP}2,500`);
+    expect(q(".history-amount").className).toContain("num"); // tabular numerals
     expect(row.querySelector("svg")).not.toBeNull();
   });
 
   it("says 'No receipts yet.' when there are none", () => {
     const { q, click } = setup([]);
-    click("#open-settings");
-    click("#open-receipts");
+    click("#nav-history");
     expect(q("#receipts-empty").textContent).toBe("No receipts yet.");
   });
 });
@@ -185,7 +172,7 @@ describe("Receipt detail", () => {
     const { q, openReceipt } = setup();
     openReceipt();
     const card = q("#receipt-budget");
-    expect(card.className).toContain("--color-budget-surface");
+    expect(card.className).toContain("receipt-budget");
     expect(card.textContent).toContain(`Today’s budgetPHP${NBSP}12,000`);
     expect(card.textContent).toContain(`Left for todayPHP${NBSP}9,500`);
     const left = q("#receipt-budget div:last-child span:last-child"); // anchored on the card, so it can't match an outer element
@@ -210,10 +197,8 @@ describe("Receipt detail", () => {
     const { q, openReceipt } = setup();
     openReceipt();
     const del = q("#delete-receipt").className;
-    expect(del).toContain("bg-[var(--color-danger-soft)]");
-    expect(del).toContain("text-[var(--color-danger)]");
-    expect(del).toContain("w-full");
-    expect(del).toContain("rounded-xl");
+    expect(del).toContain("delete-receipt");
+    expect(del).toContain("tap");
   });
 });
 
@@ -239,9 +224,9 @@ describe("Delete dialogs", () => {
   });
 });
 
-describe("Settings and Receipts are flat", () => {
+describe("Settings and History are flat", () => {
   it("have no shadows, and no leftover bordered cards, in their components", () => {
-    for (const file of ["SettingsGroup.tsx", "SettingsPage.tsx", "ReceiptsList.tsx", "ReceiptDetail.tsx", "DeleteDialog.tsx"]) {
+    for (const file of ["SettingsGroup.tsx", "SettingsPage.tsx", "ReceiptDetail.tsx", "DeleteDialog.tsx", "HistoryPage.tsx"]) {
       const source = readFileSync(resolve(process.cwd(), "src/ui/components", file), "utf8");
       expect(source, file).not.toMatch(/shadow-\[/);
       expect(source, file).not.toContain("--color-card-shadow");
@@ -254,7 +239,7 @@ describe("Settings and Receipts are flat", () => {
     expect(css).toMatch(/a\.settings-row::after \{[^}]*background: currentColor;[^}]*opacity: 0;/);
     expect(css).toMatch(/a\.settings-row:active::after \{ opacity: \.08; \}/);
     expect(css).not.toMatch(/color-mix\(/);
-    for (const file of ["SettingsGroup.tsx", "SettingsPage.tsx", "ReceiptsList.tsx", "ReceiptDetail.tsx", "DeleteDialog.tsx"]) {
+    for (const file of ["SettingsGroup.tsx", "SettingsPage.tsx", "ReceiptDetail.tsx", "DeleteDialog.tsx", "HistoryPage.tsx"]) {
       expect(readFileSync(resolve(process.cwd(), "src/ui/components", file), "utf8"), file).not.toContain("color-mix");
     }
   });

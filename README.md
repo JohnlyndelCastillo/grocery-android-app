@@ -11,8 +11,9 @@ A simple, phone-friendly grocery list for planning a shopping trip. Add items, a
 - **Plan the list.** Add items, set a unit price, and adjust quantities with **+ / −** or by typing. Quantity can be zero, but never negative. Each item shows its line total.
 - **Shop from two tabs.** Check an item to move it from **Still needed** to **In cart**. A progress bar and count show how far along the trip is, and **Mark all in cart** checks or unchecks everything.
 - **Watch your spending.** The summary card shows what is in your cart, the planned total, and today's budget with **Remaining** or **Over by**. Tap it to set or clear the daily budget and preview the result as you type.
-- **Finish a trip.** On the **In cart** tab, **Finish trip** saves a receipt (date and time, items, total, and that day's budget) and unchecks everything for the next trip.
-- **Keep your receipts.** Open **Settings → Receipts** to browse past trips, view the details of each one, or delete it after a confirmation.
+- **Finish a trip.** On the **In cart** tab, **Finish trip** saves a receipt (date and time, items, total, that day's budget, and which list and store it came from) and unchecks everything for the next trip.
+- **Keep several lists.** Create, rename, duplicate, archive, restore and delete lists, and group them by store. Home offers the list you are most likely to continue, and a list can be repeated from a past receipt.
+- **Keep your receipts.** Open **History** to browse past trips by month, view the details of each one, or delete it after a confirmation.
 - **Choose a currency.** PHP, VND or USD, shown as the code and the amount (for example `PHP 1,240`). This changes formatting only; it does not convert amounts. Each receipt keeps the currency it was made in.
 - **Delete safely.** Swipe an item left to reveal a confirmed delete, or tap **×** to delete it immediately with **Undo**. Swipe right to mark it in the cart. Select several items to delete them together.
 - **Works the way your phone does.** It follows the system light or dark theme and large text sizes. In the Android app, the system **Back** button closes sheets and dialogs, goes up through Settings, and then sends the app to the background. Checking an item and finishing a trip give light haptic feedback.

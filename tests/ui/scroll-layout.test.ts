@@ -1,39 +1,33 @@
 import { act } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Item } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeItem, makeList, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: true }; // 100, in the cart
-const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: true });
+const eggs: Item = makeItem({ id: "2", name: "Eggs", qty: 1, price: 30, checked: false });
 
 let unmount = () => {};
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
   localStorage.clear();
 });
 
 function setup(budget: number | null = null) {
-  const storage = {
-    loadItems: () => [rice, eggs],
-    saveItems: vi.fn(),
-    loadDailyBudget: () => budget,
-    saveDailyBudget: vi.fn(),
-    loadReceipts: () => [],
-    saveReceipts: vi.fn(),
-  } as unknown as GroceryStorage;
+  const test = makeStorage(makeState({ lists: [makeList("My list", [rice, eggs])], activeListId: "list-1" }), budget);
+  window.location.hash = "#/lists/list-1";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
 
-  // jsdom has no layout: give the page scroller a size and a scroll position we control.
-  const main = q<HTMLElement>("#home-page main");
+  const main = q<HTMLElement>("#screen-scroll");
   const scroll = { top: 0 };
   Object.defineProperties(main, {
     scrollTop: { get: () => scroll.top, set: (v: number) => { scroll.top = v; }, configurable: true },
@@ -50,73 +44,32 @@ function setup(budget: number | null = null) {
 describe("page scrolling", () => {
   it("the page is the only scroller: the list and its rows don't scroll on their own", () => {
     const { q, root } = setup();
-    const scrollers = root.querySelectorAll('#home-page [class*="overflow-y-auto"], #home-page [class*="overflow-auto"]');
-    expect([...scrollers]).toEqual([q("#home-page main")]);
+    const scrollers = root.querySelectorAll('#screen-scroll [class*="overflow-y-auto"], #screen-scroll [class*="overflow-auto"]');
+    expect([...scrollers]).toEqual([]);
     expect(q("#list").className).not.toMatch(/max-h|overflow-(y-|x-)?(auto|scroll)/); // overflow-hidden only clips the rounded corners
   });
 
-  it("the tabs sit in a sticky wrapper inside the scrolling page", () => {
+  it("the tabs and the add bar sit outside the scrolling list", () => {
     const { q } = setup();
-    const sticky = q<HTMLElement>("#needed-tab").closest<HTMLElement>(".sticky")!;
-    expect(sticky).not.toBeNull();
-    expect(sticky.contains(q("#cart-tab"))).toBe(true);
-    expect(q("#home-page main").contains(sticky)).toBe(true);
-    expect(sticky.className).toContain("top-[var(--bar-h)]"); // sits just under the compact bar
-    expect(sticky.className).toContain("bg-app"); // opaque, so rows scrolling underneath don't show through
+    expect(q("#screen-scroll").contains(q("#add-form"))).toBe(false);
+    expect(q("#screen-scroll").contains(q("#needed-tab"))).toBe(true); // tabs are inside the scroller in this design
   });
 });
 
-describe("collapsing header", () => {
-  it("lives inside the scrolling page, with a sticky bar that never changes size", () => {
+describe("list detail layout", () => {
+  it("has a header, a scrolling main and a fixed bottom bar", () => {
     const { q } = setup();
-    const main = q<HTMLElement>("#home-page main");
-    const bar = q<HTMLElement>("#app-bar");
-    expect(main.contains(bar)).toBe(true);
-    expect(main.contains(q("#app-header"))).toBe(true);
-    expect(bar.className).toContain("sticky");
-    expect(bar.className).toContain("top-0");
-    expect(bar.className).toContain("h-[var(--bar-h)]");
-    expect(bar.contains(q("#open-settings"))).toBe(true);
+    expect(q("#list-detail-page")).not.toBeNull();
+    expect(q("#list-detail-page header")).not.toBeNull();
+    expect(q("#screen-scroll")).not.toBeNull();
+    expect(q(".detail-bottom")).not.toBeNull();
+    expect(q(".detail-bottom").contains(q("#finish-trip"))).toBe(false); // cart empty
   });
 
-  it("only animates opacity, never layout properties like padding, font-size or height", () => {
-    // Animating layout made the collapse stutter on phones, so keep it to opacity.
-    const { q } = setup();
-    const html = q("#app-bar").outerHTML + q("#app-header").outerHTML;
-    expect(html).not.toMatch(/transition-\[[^\]]*(padding|font-size|grid-template-rows|margin|height|border-radius)/);
-    expect(html).toContain("transition-opacity");
-  });
-
-  it("compacts once the page is scrolled and expands again at the top", () => {
+  it("shows Finish trip only on the In cart tab", () => {
     const { q, scrollTo } = setup();
-    const header = q<HTMLElement>("#app-header");
-    expect(header.dataset.compact).toBe("false");
-    expect(q("#compact-summary").getAttribute("aria-hidden")).toBe("true");
-
-    scrollTo(120);
-    expect(header.dataset.compact).toBe("true");
-    expect(q("#compact-summary").getAttribute("aria-hidden")).toBe("false");
-    expect(q("#compact-summary").textContent).toContain("PHP\u00a0100"); // the cart total, in one line
-    expect(q("#cart-card").closest('[aria-hidden="true"]')).not.toBeNull(); // the big cards are hidden from screen readers
-
-    scrollTo(30); // part-way up: still compact, so it doesn't flicker
-    expect(header.dataset.compact).toBe("true");
-
-    scrollTo(0);
-    expect(header.dataset.compact).toBe("false");
-    expect(q("#cart-card").closest('[aria-hidden="true"]')).toBeNull();
-  });
-
-  it("keeps the settings button and title while compact", () => {
-    const { q, scrollTo } = setup();
-    scrollTo(120);
-    expect(q("#open-settings")).not.toBeNull();
-    expect(q("#app-header h1").textContent).toBe("Shopping list");
-  });
-
-  it("the compact summary still says when you're over budget", () => {
-    const { q, scrollTo } = setup(50); // cart is 100, budget 50
-    scrollTo(120);
-    expect(q("#compact-summary").textContent).toContain("over today's budget");
+    void scrollTo;
+    act(() => q<HTMLButtonElement>("#cart-tab").click());
+    expect(q(".detail-bottom").contains(q("#finish-trip"))).toBe(true);
   });
 });

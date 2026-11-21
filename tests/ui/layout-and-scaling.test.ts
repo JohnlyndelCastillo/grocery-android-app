@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Item } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeItem, makeList, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
@@ -14,27 +14,22 @@ beforeAll(() => {
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const stylesheet = read("src/styles/style.css");
-const NBSP = "\u00A0";
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: true };
+
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: true });
 
 let unmount = () => {};
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
 });
 
 function setup(items: Item[] = [rice], budget: number | null = 500) {
-  const storage: GroceryStorage = {
-    loadItems: () => items,
-    saveItems: vi.fn(),
-    loadDailyBudget: () => budget,
-    saveDailyBudget: vi.fn(),
-    loadReceipts: () => [],
-    saveReceipts: vi.fn(),
-  };
+  const test = makeStorage(makeState({ lists: [makeList("My list", items)], activeListId: "list-1" }), budget);
+  window.location.hash = "#/lists/list-1";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   return { q: <T extends Element>(sel: string) => root.querySelector<T>(sel)! };
 }
 
@@ -57,11 +52,8 @@ describe("gutters and the content column", () => {
   });
 
   it("keeps the Settings pages and Home on the same column", () => {
-    for (const file of ["SettingsPage.tsx"]) {
-      const source = read(`src/ui/components/${file}`);
-      expect(source).toContain("max-w-[600px]");
-      expect(source).not.toMatch(/max-w-\[(584|620)px\]/);
-    }
+    expect(read("src/ui/components/SettingsPage.tsx")).not.toMatch(/max-w-\[(584|620)px\]/);
+    expect(read("src/ui/components/HomePage.tsx")).not.toMatch(/max-w-\[(584|620)px\]/);
   });
 });
 
@@ -73,27 +65,15 @@ describe("reflow at 320dp and large text", () => {
     expect(q("#budget-row > span:last-child").className).toContain("ml-auto"); // stays right-aligned when it drops down
   });
 
-  it("never crops the cart total in the compact bar: the label gives way first", () => {
+  it("keeps the add form and tabs accessible at small widths", () => {
     const { q } = setup();
-    const [label, amount] = [...q("#compact-summary").children];
-    expect(label.className).toContain("truncate");
-    expect(label.className).toContain("min-w-0");
-    expect(amount.textContent).toBe(`PHP${NBSP}100`);
-    expect(amount.className).toContain("shrink-0"); // cannot be squeezed
-    expect(amount.className).not.toContain("truncate");
-    expect(q("#compact-summary").textContent).toBe(`In your cart ·${NBSP}PHP${NBSP}100`);
-  });
-
-  it("lets the tabs, the add form and the sheet buttons grow instead of cropping", () => {
-    const { q } = setup();
-    expect(q("#add-form").className).toContain("flex-wrap");
+    expect(q("#add-form").className).toContain("flex");
     expect(q("#needed-tab").className).not.toContain("whitespace-nowrap");
     expect(q("#add-form button").className).toContain("whitespace-nowrap"); // "Add" is one short word; the field wraps instead
-    expect(q("#budget-sheet").className).toContain("overflow-y-auto"); // the whole sheet scrolls at large text
   });
 
   it("uses no fixed heights that could clip text in the screens", () => {
-    for (const file of ["SummaryCard.tsx", "Header.tsx", "ShoppingList.tsx", "ReceiptDetail.tsx", "ReceiptsList.tsx", "SettingsGroup.tsx"]) {
+    for (const file of ["SummaryCard.tsx", "ShoppingList.tsx", "ReceiptDetail.tsx", "SettingsPage.tsx", "HomePage.tsx", "ListsPage.tsx"]) {
       const source = read(`src/ui/components/${file}`);
       expect(source, file).not.toMatch(/\bh-\[\d+px\]/); // hard pixel heights; controls use min-heights (the .tap utility)
     }

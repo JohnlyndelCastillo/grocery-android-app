@@ -1,7 +1,7 @@
 import { act } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeItem, makeList, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 beforeAll(() => {
@@ -10,26 +10,26 @@ beforeAll(() => {
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 });
 
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
-const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: false });
+const eggs: Item = makeItem({ id: "2", name: "Eggs", qty: 1, price: 30, checked: false });
 
 let unmount = () => {};
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
 });
 
 function setup(items: Item[]) {
-  const storage: GroceryStorage = { loadItems: () => items, saveItems: vi.fn(), loadDailyBudget: () => null,
-    loadReceipts: () => [],
-    saveReceipts: vi.fn(), saveDailyBudget: vi.fn() };
+  const test = makeStorage(makeState({ lists: [makeList("My list", items)], activeListId: "list-1" }));
+  window.location.hash = "#/lists/list-1";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
   const qa = <T extends Element>(sel: string) => [...root.querySelectorAll<T>(sel)];
   const click = (sel: string) => act(() => q<HTMLElement>(sel).click());
-  return { q, qa, click, storage };
+  return { q, qa, click, storage: test.storage, saved: test.saved };
 }
 
 function touch(el: Element, type: "touchstart" | "touchmove" | "touchend", x: number, y = 0) {
@@ -71,13 +71,11 @@ describe("swipe", () => {
   });
 
   it("a right swipe checks a row when no delete action is open", () => {
-    const { q, storage } = setup([rice]);
+    const { q, saved } = setup([rice]);
     const li = q<HTMLLIElement>("#list li");
     swipe(li, 120, 200);
 
-    // Checking the row moves it out of the active "Still needed" list immediately,
-    // so assert the saved item state rather than querying a checkbox that no longer exists.
-    expect(storage.saveItems).toHaveBeenLastCalledWith([
+    expect(saved().lists[0].items).toEqual([
       expect.objectContaining({ id: "1", checked: true }),
     ]);
     expect(q("#cart-tab").getAttribute("aria-selected")).toBe("false");
