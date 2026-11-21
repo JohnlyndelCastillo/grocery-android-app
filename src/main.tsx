@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/plus-jakarta-sans";
 import "./styles/style.css";
 import { createLocalStorageAdapter } from "./storage/storage";
 import { App } from "./ui/App";
