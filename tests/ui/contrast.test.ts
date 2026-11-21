@@ -74,6 +74,7 @@ const pairs: Array<[string, string, number, string]> = [
   ["danger", "budget-surface", 4.5, "Over by amount in the budget sheet"],
   ["input-border", "app", 3, "field and checkbox outlines on the canvas"],
   ["input-border", "surface", 3, "field and checkbox outlines on cards"],
+  ["gold", "gold-soft", 4.5, "gold text on its soft surface"],
 ];
 
 describe.each(["light", "dark"] as const)("color contrast (%s)", (mode) => {
@@ -90,6 +91,16 @@ describe.each(["light", "dark"] as const)("color contrast (%s)", (mode) => {
 describe("palette structure", () => {
   const roles = ["app", "surface", "ink", "muted", "green", "on-action", "budget-surface", "budget-text", "line",
     "input-border", "track", "danger", "danger-soft", "on-danger"];
+  const lightExpected = {
+    app: "#f8f8f5", surface: "#ffffff", ink: "#1f2421", muted: "#666b66", green: "#1b382b", "on-action": "#ffffff",
+    "budget-surface": "#edf3ef", "budget-text": "#496258", line: "#e2e2d9", "input-border": "#809086", track: "#ecece5",
+    danger: "#b82938", "danger-soft": "#fceeee", "on-danger": "#ffffff",
+  };
+  const darkExpected = {
+    app: "#151a17", surface: "#202722", ink: "#eff3ef", muted: "#a4aea7", green: "#a5cbb7", "on-action": "#13261d",
+    "budget-surface": "#28352e", "budget-text": "#b0c9bb", line: "#384139", "input-border": "#85998a", track: "#2c382f",
+    danger: "#ff9ca6", "danger-soft": "#42272e", "on-danger": "#141a16",
+  };
 
   it.each(roles)("%s has its own dark value", (role) => {
     expect(darkOverrides[role], `--color-${role} missing from the dark block`).toBeDefined();
@@ -97,16 +108,8 @@ describe("palette structure", () => {
   });
 
   it("matches the values in the design spec", () => {
-    expect(lightTokens).toMatchObject({
-      app: "#f4f6f2", surface: "#ffffff", ink: "#202b24", muted: "#536258", green: "#216443", "on-action": "#ffffff",
-      "budget-surface": "#edf3ef", "budget-text": "#496258", line: "#dde4dd", "input-border": "#809086", track: "#e9ede7",
-      danger: "#b82938", "danger-soft": "#fceeee",
-    });
-    expect(darkOverrides).toMatchObject({
-      app: "#141a16", surface: "#202922", ink: "#eff5ef", muted: "#b8c8bb", green: "#91d5a9", "on-action": "#141a16",
-      "budget-surface": "#28352e", "budget-text": "#b0c9bb", line: "#39483d", "input-border": "#85998a", track: "#2c382f",
-      danger: "#ff9ca6", "danger-soft": "#42272e",
-    });
+    expect(lightTokens).toMatchObject(lightExpected);
+    expect(darkOverrides).toMatchObject(darkExpected);
   });
 
   it("every alias points at a token that exists", () => {

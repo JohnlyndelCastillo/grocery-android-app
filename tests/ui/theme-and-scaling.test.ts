@@ -26,7 +26,7 @@ describe("theme and responsive scaling foundations", () => {
   });
 
   it("points the repeated settings surfaces at the shared divider and control-track roles", () => {
-    expect(stylesheet).toContain("--color-line: #dde4dd");
+    expect(stylesheet).toContain("--color-line: #e2e2d9");
     expect(stylesheet).toContain("--color-settings-border: var(--color-line)");
     expect(stylesheet).toContain("--color-settings-hover: var(--color-track)");
     expect(settingsGroup).toContain("var(--color-settings-border)");
@@ -49,13 +49,11 @@ describe("theme and responsive scaling foundations", () => {
     expect(stylesheet).toContain("@media (orientation: landscape) and (max-height: 500px)");
   });
 
-  it("uses a flat 40% scrim: no blur and no dialog shadows", () => {
+  it("uses a flat scrim on dialogs: no dialog shadows", () => {
     expect(stylesheet).toContain("--color-scrim: #10111c66");
-    // Spelled in two pieces so Tailwind, which also scans tests/, does not emit a utility class for it.
-    expect(stylesheet).not.toContain(["backdrop", "filter"].join("-"));
     expect(stylesheet).toContain("dialog::backdrop { background: var(--color-scrim); }");
     for (const file of ["BudgetSheet.tsx", "DeleteDialog.tsx"]) {
-      expect(readFileSync(resolve(projectRoot, "src/ui/components", file), "utf8")).not.toMatch(/shadow-\[/);
+      expect(readFileSync(resolve(projectRoot, `src/ui/components/${file}`), "utf8")).not.toMatch(/shadow-\[/);
     }
   });
 
@@ -69,9 +67,9 @@ describe("theme and responsive scaling foundations", () => {
     expect(stylesheet).toMatch(/input::placeholder\s*\{\s*color:\s*var\(--color-muted\)/);
   });
 
-  it("defines the seven type roles with a 1.3 line height, plus tabular numerals and the 48px target", () => {
+  it("defines the seven type roles with tabular numerals and the 48px target", () => {
     for (const role of ["title", "total", "sheet", "item", "body", "tab", "label"]) {
-      expect(stylesheet).toMatch(new RegExp(`--text-${role}:\\s*[\\d.]+rem;\\s*--text-${role}--line-height:\\s*1\\.3;`));
+      expect(stylesheet).toMatch(new RegExp(`--text-${role}:\\s*[\\d.]+rem;\\s*--text-${role}--line-height:\\s*[\\d.]+;`));
     }
     expect(stylesheet).toMatch(/\.num\s*\{\s*font-variant-numeric:\s*tabular-nums/);
     expect(stylesheet).toMatch(/\.tap\s*\{\s*min-width:\s*48px;\s*min-height:\s*48px/);
@@ -82,7 +80,7 @@ describe("theme and responsive scaling foundations", () => {
       "warn-ink", "warn-border", "warn-surface", "button-shadow", "dialog-shadow", "backdrop", "placeholder", "focus-ring", "danger-ring", "green-fill-hover"];
     const sources = [
       stylesheet,
-      ...["Header", "SummaryCard", "AddItemForm", "BudgetSheet", "DeleteDialog", "GroceryRow", "ShoppingList", "SettingsPage"].map((name) =>
+      ...["SummaryCard", "AddItemForm", "BudgetSheet", "DeleteDialog", "GroceryRow", "ShoppingList", "SettingsPage", "HomePage", "ListsPage"].map((name) =>
         readFileSync(resolve(projectRoot, `src/ui/components/${name}.tsx`), "utf8")),
     ].join("\n");
     for (const token of deleted) expect(sources, `--color-${token}`).not.toContain(`--color-${token}`);
@@ -95,7 +93,7 @@ describe("theme and responsive scaling foundations", () => {
     expect(block).not.toMatch(/height|width|padding|margin|top|bottom/); // no layout properties
     expect(stylesheet).not.toContain("220ms");
     expect(stylesheet).not.toMatch(/translateY\(16px\) scale/);
-    expect(stylesheet).toMatch(/prefers-reduced-motion: reduce\) \{\s*#budget-sheet,\s*#budget-sheet::backdrop \{\s*transition: none/);
+    expect(stylesheet).toContain("#budget-sheet, #budget-sheet::backdrop { transition: none; }");
   });
 
   it("has no orange token left: invalid amounts use Destructive text", () => {
@@ -103,8 +101,8 @@ describe("theme and responsive scaling foundations", () => {
     expect(stylesheet).not.toContain("--color-sheet-label");
   });
 
-  it("draws every checkbox 24px with a 6px radius, including Mark all, Select all and the in-between state", () => {
-    expect(stylesheet).toMatch(/li input\[type="checkbox"\], #check-all, #select-all \{[^}]*width: 24px;[^}]*height: 24px;[^}]*border-radius: 6px/);
+  it("draws every checkbox 22px with a 7px radius, including Mark all, Select all and the in-between state", () => {
+    expect(stylesheet).toMatch(/li input\[type="checkbox"\], #check-all, #select-all \{[^}]*width: 22px;[^}]*height: 22px;[^}]*border-radius: 7px/);
     expect(stylesheet).toContain("#check-all:indeterminate");
     expect(stylesheet).toContain("#select-all:indeterminate");
   });
@@ -121,8 +119,8 @@ describe("theme and responsive scaling foundations", () => {
 
   it("sets the browser chrome colors and lets the viewport resize with the keyboard", () => {
     const html = readFileSync(resolve(projectRoot, "index.html"), "utf8");
-    expect(html).toContain('content="#f4f6f2" media="(prefers-color-scheme: light)"');
-    expect(html).toContain('content="#141a16" media="(prefers-color-scheme: dark)"');
+    expect(html).toContain('content="#f8f8f5" media="(prefers-color-scheme: light)"');
+    expect(html).toContain('content="#151a17" media="(prefers-color-scheme: dark)"');
     expect(html).toContain("interactive-widget=resizes-content");
   });
 });

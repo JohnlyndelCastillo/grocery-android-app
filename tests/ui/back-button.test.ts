@@ -4,6 +4,7 @@ import type { Item, Receipt } from "../../src/domain/types";
 import type { GroceryStorage } from "../../src/storage/storage";
 import { useBackButton } from "../../src/ui/hooks/useBackButton";
 import { mountApp } from "../helpers/mountApp";
+import { makeItem, makeList, makeReceipt, makeState } from "../helpers/appState";
 import { renderHook } from "../helpers/renderHook";
 
 // A stand-in for the Capacitor App plugin that remembers which listeners are still registered.
@@ -93,26 +94,26 @@ describe("useBackButton", () => {
 });
 
 describe("Back button in the app", () => {
-  const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
-  const trip: Receipt = { id: "r1", finishedAt: "2026-11-01T14:12:00.000Z", currency: "PHP", lines: [{ name: "test 1", qty: 1, price: 100 }], total: 100, budget: 500 };
+  const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: false });
+  const trip: Receipt = makeReceipt({ id: "r1", finishedAt: "2026-11-01T14:12:00.000Z", currency: "PHP", lines: [{ name: "test 1", qty: 1, price: 100 }], total: 100, budget: 500 });
   let unmount = () => {};
 
   afterEach(() => {
     act(() => unmount());
     document.body.replaceChildren();
+    window.location.hash = "";
   });
 
   async function setup() {
     const storage: GroceryStorage = {
-      loadItems: () => [rice],
-      saveItems: vi.fn(),
+      loadState: () => makeState({ lists: [makeList("My list", [rice])], activeListId: "list-1", receipts: [trip] }),
+      saveState: vi.fn(),
       loadDailyBudget: () => null,
       saveDailyBudget: vi.fn(),
-      loadReceipts: () => [trip],
-      saveReceipts: vi.fn(),
     };
     const root = document.createElement("div");
     document.body.replaceChildren(root);
+    window.location.hash = "#/";
     act(() => { unmount = mountApp(root, storage); });
     await registered(); // StrictMode mounts twice; only the last listener is left
     const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
@@ -120,41 +121,47 @@ describe("Back button in the app", () => {
     return { q, click };
   }
 
-  it("goes up one screen at a time in Settings: Receipt, Receipts, Settings, Home, then leaves the app", async () => {
+  it("moves between Settings screens with its own back button, then leaves with Android Back", async () => {
     const { q, click } = await setup();
-    click("#open-settings");
-    click("#open-receipts");
-    click("#receipts-list button");
-    expect(q("#settings-title").textContent).toBe("Receipt");
+    click("#nav-settings");
+    expect(q("#settings-title").textContent).toBe("Settings");
 
-    pressBack();
-    expect(q("#settings-title").textContent).toBe("Receipts");
+    click("#open-currency");
+    expect(q("#settings-title").textContent).toBe("Currency");
+    click("#close-settings");
+    expect(q("#settings-title").textContent).toBe("Settings");
+
+    click("#open-about");
+    expect(q("#settings-title").textContent).toBe("About");
     pressBack();
     expect(q("#settings-title").textContent).toBe("Settings");
+
     pressBack();
-    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
-    expect(q<HTMLElement>("#settings-page").hidden).toBe(true);
+    expect(q("#home-page")).not.toBeNull();
     expect(plugin.minimizeApp).not.toHaveBeenCalled();
 
     pressBack(); // nothing left to go back to
     expect(plugin.minimizeApp).toHaveBeenCalledTimes(1);
   });
 
-  it("goes back from Currency and About to Settings", async () => {
+  it("opens a receipt in History and goes back through History and Home", async () => {
     const { q, click } = await setup();
-    click("#open-settings");
-    click("#open-currency");
+    click("#nav-history");
+    expect(q("#history-page")).not.toBeNull();
+    click("#receipts-list button");
+    expect(q("#receipt-detail")).not.toBeNull();
+    expect(q("#receipt-total").textContent).toContain("PHP\u00a0100");
+
     pressBack();
-    expect(q("#settings-title").textContent).toBe("Settings");
-    click("#open-about");
+    expect(q("#history-page")).not.toBeNull();
     pressBack();
-    expect(q("#settings-title").textContent).toBe("Settings");
+    expect(q("#home-page")).not.toBeNull();
     expect(plugin.minimizeApp).not.toHaveBeenCalled();
   });
 
   it("closes the budget sheet first, without leaving the screen", async () => {
     const { q, click } = await setup();
-    click("#budget-row");
+    click("#home-budget-card");
     expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
     pressBack();
     expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
@@ -163,7 +170,8 @@ describe("Back button in the app", () => {
 
   it("closes the item delete confirmation, keeping the item", async () => {
     const { q, click } = await setup();
-    click(".swipe-delete"); // the × button deletes at once with Undo; swipe-delete asks first
+    click(".active-list button"); // open the list
+    act(() => q<HTMLButtonElement>('.swipe-delete[aria-label="Delete Rice"]').click());
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
     pressBack();
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(false);
@@ -173,36 +181,41 @@ describe("Back button in the app", () => {
 
   it("closes the receipt delete confirmation first, staying on that receipt", async () => {
     const { q, click } = await setup();
-    click("#open-settings");
-    click("#open-receipts");
+    click("#nav-history");
     click("#receipts-list button");
     click("#delete-receipt");
     expect(q<HTMLDialogElement>("#receipt-confirm-delete-dialog").open).toBe(true);
     pressBack();
     expect(q<HTMLDialogElement>("#receipt-confirm-delete-dialog").open).toBe(false);
-    expect(q("#settings-title").textContent).toBe("Receipt");
     expect(q("#receipt-detail")).not.toBeNull();
+    expect(plugin.minimizeApp).not.toHaveBeenCalled();
   });
 
   it("leaves select mode before leaving the app", async () => {
     const { q, click } = await setup();
+    click(".active-list button");
     click("#toggle-select");
     expect(q("#toggle-select").textContent).toBe("Cancel");
-    pressBack();
+    pressBack(); // exits select mode
     expect(q("#toggle-select").textContent).toBe("Select");
     expect(plugin.minimizeApp).not.toHaveBeenCalled();
+    // leave list detail -> Lists -> Home -> minimize
+    pressBack();
+    pressBack();
     pressBack();
     expect(plugin.minimizeApp).toHaveBeenCalledTimes(1);
   });
 
   it("closes Settings before it leaves select mode", async () => {
     const { q, click } = await setup();
+    click(".active-list button");
     click("#toggle-select");
-    click("#open-settings");
-    pressBack(); // Settings -> Home, still selecting
-    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
+    click("#nav-settings");
+    pressBack(); // Settings -> Home
+    expect(q("#home-page")).not.toBeNull();
+    click(".active-list button"); // reopen the list
     expect(q("#toggle-select").textContent).toBe("Cancel");
-    pressBack(); // now select mode ends
+    pressBack(); // exits select mode
     expect(q("#toggle-select").textContent).toBe("Select");
     expect(plugin.minimizeApp).not.toHaveBeenCalled();
   });

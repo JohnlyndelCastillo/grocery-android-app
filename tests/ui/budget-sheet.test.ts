@@ -1,7 +1,7 @@
 import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Item } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import { makeItem, makeList, makeState, makeStorage } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
@@ -11,29 +11,31 @@ beforeAll(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: false });
 let unmount = () => {};
 
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
+  vi.useRealTimers();
 });
 
 function setup(items: Item[] = [], budget: number | null = null) {
-  const storage: GroceryStorage = {
-    loadItems: () => items,
-    saveItems: vi.fn(),
-    loadDailyBudget: () => budget,
-    loadReceipts: () => [],
-    saveReceipts: vi.fn(),
-    saveDailyBudget: vi.fn(),
-  };
+  const test = makeStorage(makeState({ lists: [makeList("My list", items)], activeListId: "list-1" }), budget);
+  window.location.hash = "#/";
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
   const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
-  return { root, storage, q, click };
+  const type = (value: string) => act(() => {
+    const input = q<HTMLInputElement>("#budget-input");
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  const submit = () => act(() => q("#budget-form").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  return { root, q, click, type, submit, ...test };
 }
 
 describe("budget sheet", () => {
@@ -59,23 +61,18 @@ describe("budget sheet", () => {
 
   it("has a 48dp Close that dismisses the sheet without saving", () => {
     const { q, click, storage } = setup([], 100);
-    click<HTMLButtonElement>("#budget-row");
+    click("#home-budget-card");
     expect(q("#close-budget").className).toMatch(/(^|\s)tap(\s|$)/);
     expect(q("#close-budget").getAttribute("aria-label")).toBe("Close");
     q<HTMLInputElement>("#budget-input").value = "999";
-    click<HTMLButtonElement>("#close-budget");
+    click("#close-budget");
     expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
     expect(storage.saveDailyBudget).not.toHaveBeenCalled();
   });
 
   it("shows what Save would leave in a Remaining row, for every state", () => {
-    const { q, click } = setup([{ ...rice, checked: true }], 500);
-    const type = (value: string) => act(() => {
-      const input = q<HTMLInputElement>("#budget-input");
-      input.value = value;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    click<HTMLButtonElement>("#budget-row");
+    const { q, click, type } = setup([{ ...rice, checked: true }], 500);
+    click("#home-budget-card");
     expect(q("#budget-preview").textContent).toBe("RemainingPHP\u00a0400"); // saved budget 500, 100 in the cart
     expect(q("#budget-preview").className).toContain("--color-budget-surface");
 
@@ -98,7 +95,7 @@ describe("budget sheet", () => {
 
   it("has a full-width Save and a quiet Clear budget that is not red, shown only when a budget exists", () => {
     const withBudget = setup([], 100);
-    withBudget.click<HTMLButtonElement>("#budget-row");
+    withBudget.click("#home-budget-card");
     const save = withBudget.q("#budget-form button[type=submit]");
     expect(save.textContent).toBe("Save");
     expect(save.className).toMatch(/(^|\s)tap(\s|$)/);
@@ -114,6 +111,21 @@ describe("budget sheet", () => {
     expect(none.q("#clear-budget")).toBeNull();
   });
 
+  it("saves a budget and closes, then clears it from the sheet", () => {
+    const { q, click, type, submit, storage } = setup([{ ...rice, checked: true }], 500);
+    click("#home-budget-card");
+    type("300");
+    submit();
+    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(300);
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
+    expect(q("#home-budget-amount").textContent).toBe("PHP\u00a0200");
+
+    click("#home-budget-card");
+    click("#clear-budget");
+    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(null);
+    expect(q("#home-budget-amount").textContent).toBe("No limit");
+  });
+
   it("keeps the whole sheet reachable with the keyboard open: it scrolls, and the field is brought into view", () => {
     vi.useFakeTimers();
     try {
@@ -122,7 +134,7 @@ describe("budget sheet", () => {
       expect(sheet.className).toContain("max-h-[100dvh]"); // the visible area, which the keyboard shrinks
       expect(sheet.className).toContain("overflow-y-auto");
       expect(sheet.className).toContain("overscroll-behavior:contain");
-      click<HTMLButtonElement>("#budget-row");
+      click("#home-budget-card");
       const scrollIntoView = vi.fn();
       const input = q<HTMLInputElement>("#budget-input");
       input.scrollIntoView = scrollIntoView;

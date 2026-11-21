@@ -1,8 +1,8 @@
 import { act } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Item, Receipt } from "../../src/domain/types";
-import type { GroceryStorage } from "../../src/storage/storage";
+import type { AppStateV2, Item } from "../../src/domain/types";
 import { version } from "../../package.json";
+import { makeItem, makeList, makeReceipt, makeState, makeStorage, makeStore } from "../helpers/appState";
 import { mountApp } from "../helpers/mountApp";
 
 // jsdom has no <dialog>.showModal(), so give it a tiny stand-in.
@@ -12,454 +12,385 @@ beforeAll(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 });
 
-const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: false };
-const eggs: Item = { id: "2", name: "Eggs", qty: 1, price: 30, checked: false };
+const rice: Item = makeItem({ id: "1", name: "Rice", qty: 2, price: 50, checked: false }); // 100 planned
+const eggs: Item = makeItem({ id: "2", name: "Eggs", qty: 1, price: 30, checked: false }); // 30 planned
 let unmount = () => {};
 
 afterEach(() => {
   act(() => unmount());
   document.body.replaceChildren();
+  window.location.hash = "";
 });
 
-function setup(items: Item[] = [], budget: number | null = null, receipts: Receipt[] = []) {
-  const storage: GroceryStorage = {
-    loadItems: () => items,
-    saveItems: vi.fn(),
-    loadDailyBudget: () => budget,
-    loadReceipts: () => receipts,
-    saveReceipts: vi.fn(),
-    saveDailyBudget: vi.fn(),
-  };
+beforeEach(() => localStorage.clear());
+
+function setup({ state = makeState(), budget = null, hash = "#/" }: { state?: AppStateV2; budget?: number | null; hash?: string } = {}) {
+  const test = makeStorage(state, budget);
+  window.location.hash = hash;
   const root = document.createElement("div");
   document.body.replaceChildren(root);
-  act(() => { unmount = mountApp(root, storage); });
+  act(() => { unmount = mountApp(root, test.storage); });
   const q = <T extends Element>(sel: string) => root.querySelector<T>(sel)!;
+  const qa = <T extends Element>(sel: string) => [...root.querySelectorAll<T>(sel)];
   const click = <T extends HTMLElement>(sel: string) => act(() => q<T>(sel).click());
   const submit = (sel: string) => act(() => q(sel).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-  return { root, storage, q, click, submit };
+  const type = (sel: string, value: string) => act(() => {
+    const input = q<HTMLInputElement>(sel);
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  return { root, q, qa, click, submit, type, ...test };
 }
 
-describe("grocery app", () => {
-  beforeEach(() => localStorage.clear());
+const stateWith = (items: Item[] = [rice, eggs], overrides: Partial<AppStateV2> = {}) =>
+  makeState({ lists: [makeList("My list", items)], activeListId: "list-1", ...overrides });
 
-  it("shows the empty state, then adds an item and saves it", () => {
-    const { q, submit, storage } = setup();
-    expect(q<HTMLElement>("#empty-state").hidden).toBe(false);
+describe("Home", () => {
+  it("offers a clear first step when there are no lists", () => {
+    const { q, click } = setup();
+    expect(q("#home-page")).not.toBeNull();
+    expect(q("#home-budget-amount").textContent).toBe("No limit");
+    expect(q("#home-page").textContent).toContain("No lists yet");
+    click("#home-create-first-list");
+    expect(q<HTMLDialogElement>("#list-dialog").open).toBe(true);
+  });
 
+  it("creates the first list from the dialog and opens it", () => {
+    const { q, click, type, submit, saved } = setup();
+    click("#home-create-first-list");
+    type("#list-name", "Weekly shop");
+    submit("#list-dialog form");
+
+    expect(q("#list-detail-page")).not.toBeNull();
+    expect(q("#list-detail-title").textContent).toBe("Weekly shop");
+    expect(q("#list-detail-store").textContent).toBe("No store");
+    expect(saved().lists.map((list) => list.name)).toEqual(["Weekly shop"]);
+    expect(window.location.hash).toContain("#/lists/");
+  });
+
+  it("summarizes today's budget from receipts plus the active cart", () => {
+    const today = new Date().toISOString();
+    const state = stateWith([{ ...rice, checked: true }, eggs], {
+      receipts: [makeReceipt({ id: "r1", finishedAt: today, total: 50 })],
+    });
+    const { q } = setup({ state, budget: 500 });
+    expect(q("#home-budget-amount").textContent).toBe("PHP\u00a0350");
+    expect(q("#home-page").textContent).toContain("left of PHP\u00a0500");
+    expect(q("#home-page").textContent).toContain("Spent PHP\u00a0150");
+    expect(q("#home-page").textContent).toContain("30% used");
+    expect(q("[role=progressbar]").getAttribute("aria-valuenow")).toBe("30");
+  });
+
+  it("flags an over-budget day and caps the progress bar at 100%", () => {
+    const { q } = setup({ state: stateWith([{ ...rice, checked: true }]), budget: 50 });
+    expect(q("#home-budget-amount").textContent).toBe("PHP\u00a050");
+    expect(q("#home-budget-amount").className).toContain("is-over");
+    expect(q("#home-page").textContent).toContain("over of PHP\u00a050");
+    expect(q("[role=progressbar]").getAttribute("aria-valuenow")).toBe("100");
+  });
+
+  it("opens the budget sheet from the whole budget card", () => {
+    const { q, click } = setup({ budget: 100 });
+    click("#home-budget-card");
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
+  });
+
+  it("offers the list with work in progress, and opens it", () => {
+    const { q, click } = setup({ state: stateWith([{ ...rice, checked: true }, eggs]) });
+    const card = q("section[aria-label='Current shopping list']");
+    expect(card.textContent).toContain("My list");
+    expect(card.textContent).toContain("1 of 2 in cart");
+    expect(card.querySelector("[role=progressbar]")!.getAttribute("aria-valuenow")).toBe("50");
+    click(".active-list button");
+    expect(q("#list-detail-page")).not.toBeNull();
+  });
+
+  it("shows recent receipts and opens one", () => {
+    const receipt = makeReceipt({ id: "r1", storeName: "Market", finishedAt: "2026-11-20T10:00:00.000Z" });
+    const { q, click } = setup({ state: makeState({ receipts: [receipt] }) });
+    expect(q("#home-recent-receipts").textContent).toContain("Market");
+    expect(q("#home-recent-receipts").textContent).toContain("PHP\u00a0100");
+    click("#home-recent-receipts button");
+    expect(q("#receipt-detail-page")).not.toBeNull();
+    expect(q("#receipt-total").textContent).toBe("PHP\u00a0100");
+  });
+
+  it("goes to History from See all", () => {
+    const { q, click } = setup({ state: makeState({ receipts: [makeReceipt()] }) });
+    click("#home-see-all-receipts");
+    expect(q("#history-page")).not.toBeNull();
+  });
+
+  it("repeats a trip from a receipt", () => {
+    const { q, click, saved } = setup({ state: makeState({ receipts: [makeReceipt({ id: "r1", listName: "Weekly" })] }) });
+    click("#home-repeat-trip");
+    expect(q<HTMLDialogElement>("#repeat-trip-dialog").open).toBe(true);
+    click("#repeat-receipt-r1");
+    expect(q("#list-detail-title").textContent).toBe("Repeat of Weekly");
+    expect(saved().lists[0].items[0]).toMatchObject({ name: "Rice", checked: false });
+  });
+});
+
+describe("Lists", () => {
+  const state = () => makeState({
+    lists: [
+      makeList("Market run", [rice], { id: "market-list", storeId: "market" }),
+      makeList("Bakery run", [], { id: "bakery-list", storeId: "bakery" }),
+      makeList("Loose list", [eggs], { id: "loose" }),
+    ],
+    stores: [makeStore({ id: "market", name: "Market" }), makeStore({ id: "bakery", name: "Bakery", color: "#c08819" })],
+    activeListId: "market-list",
+  });
+
+  it("groups lists by store and shows their totals and progress", () => {
+    const { q, qa } = setup({ state: state(), hash: "#/lists" });
+    expect(q("#lists-page")).not.toBeNull();
+    const groups = qa(".store-group");
+    expect(groups[0].textContent).toContain("Market");
+    expect(groups[0].textContent).toContain("Market run");
+    expect(groups[0].textContent).toContain("PHP\u00a0100");
+    expect(groups[1].textContent).toContain("Bakery run");
+    expect(groups[2].textContent).toContain("No store");
+    expect(groups[2].textContent).toContain("Loose list");
+  });
+
+  it("opens a list card", () => {
+    const { q, click } = setup({ state: state(), hash: "#/lists" });
+    click(".list-open");
+    expect(q("#list-detail-title").textContent).toBe("Market run");
+  });
+
+  it("creates a list from the Lists page", () => {
+    const { q, click, type, submit } = setup({ hash: "#/lists" });
+    click("#new-list");
+    type("#list-name", "Monthly shop");
+    submit("#list-dialog form");
+    expect(q("#list-detail-title").textContent).toBe("Monthly shop");
+  });
+
+  it("renames, duplicates, archives, restores and deletes a list from its options", () => {
+    const { q, qa, click, type, submit, saved } = setup({ state: state(), hash: "#/lists" });
+
+    click(".list-options");
+    expect(q<HTMLDialogElement>("#list-actions-dialog").open).toBe(true);
+    click("#list-action-rename");
+    type("#list-name", "Renamed");
+    submit("#list-dialog form");
+    expect(q("#lists-page").textContent).toContain("Renamed");
+
+    click(".list-options");
+    click("#list-action-duplicate");
+    expect(q("#list-detail-title").textContent).toBe("Renamed copy");
+    expect(saved().lists).toHaveLength(4);
+
+    window.location.hash = "#/lists";
+    act(() => { window.dispatchEvent(new HashChangeEvent("hashchange")); });
+    const archivedName = q(".list-name").textContent;
+    click(".list-options");
+    click("#list-action-archive");
+    expect(q("#lists-page").textContent).toContain("Archived");
+    expect(q("#lists-page").textContent).toContain(archivedName);
+
+    const archivedCard = qa(".list-card.archived")[0];
+    act(() => archivedCard.querySelector<HTMLButtonElement>(".list-open")!.click());
+    expect(q<HTMLDialogElement>("#list-actions-dialog").open).toBe(true);
+    click("#list-action-restore");
+    expect(qa(".list-card.archived")).toHaveLength(0);
+
+    click(".list-options");
+    click("#list-action-delete");
+    expect(q<HTMLDialogElement>("#list-confirm-delete-dialog").open).toBe(true);
+    click("#list-confirm-delete");
+    expect(q("#lists-page")).not.toBeNull();
+  });
+
+  it("manages stores: add, recolor, rename and delete", () => {
+    const { q, click, type, submit, saved } = setup({ state: state(), hash: "#/lists" });
+    click("#open-store-manager");
+    expect(q<HTMLDialogElement>("#store-manager").open).toBe(true);
+
+    type("#new-store-name", "Corner shop");
+    submit(".add-store-row");
+    expect(saved().stores.map((store) => store.name)).toContain("Corner shop");
+
+    const store = saved().stores.find((entry) => entry.name === "Corner shop")!;
+    click(`#store-color-${store.id}-c08819`);
+    expect(saved().stores.find((entry) => entry.id === store.id)?.color).toBe("#c08819");
+
+    act(() => {
+      const input = q<HTMLInputElement>(`#store-name-${store.id}`);
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "Corner store");
+      input.focus();
+      input.blur();
+    });
+    expect(saved().stores.find((entry) => entry.id === store.id)?.name).toBe("Corner store");
+
+    click(`#store-delete-${store.id}`);
+    expect(q<HTMLDialogElement>("#store-confirm-delete-dialog").open).toBe(true);
+    click("#store-confirm-delete");
+    expect(saved().stores.map((entry) => entry.id)).not.toContain(store.id);
+  });
+});
+
+describe("List detail", () => {
+  const detail = (items: Item[] = [rice, eggs], overrides: Partial<AppStateV2> = {}) =>
+    setup({ state: stateWith(items, overrides), hash: "#/lists/list-1" });
+
+  it("shows the list name, store, totals and progress", () => {
+    const { q } = setup({
+      state: makeState({ lists: [makeList("Weekly", [rice, eggs], { storeId: "s1" })], stores: [makeStore({ id: "s1", name: "Market" })], activeListId: "list-1" }),
+      hash: "#/lists/list-1",
+    });
+    expect(q("#list-detail-title").textContent).toBe("Weekly");
+    expect(q("#list-detail-store").textContent).toBe("Market");
+    expect(q("#cart-card strong").textContent).toBe("PHP\u00a00");
+    expect(q(".totals .total-card:nth-child(2) strong").textContent).toBe("PHP\u00a0130");
+    expect(q("#item-count").textContent).toBe("0 / 2");
+    expect(q("#item-count").getAttribute("aria-label")).toBe("0 of 2 items in cart");
+  });
+
+  it("adds an item and saves it", () => {
+    const { q, submit, saved } = detail([]);
+    expect(q<HTMLElement>("#empty-state")!.hidden).toBe(false);
     q<HTMLInputElement>("#new-name").value = "Soap";
     submit("#add-form");
-
-    expect(q<HTMLElement>("#empty-state").hidden).toBe(true);
     expect(q("#list").textContent).toContain("Soap");
-    expect(storage.saveItems).toHaveBeenCalled();
+    expect(saved().lists[0].items.map((item) => item.name)).toEqual(["Soap"]);
   });
 
-  it("moves the cart total when an item is checked", () => {
-    const { q, click } = setup([rice, eggs]);
-    expect(q("#cart-card strong").textContent).toBe("PHP\u00a00");
+  it("moves the cart total when an item is checked and updates the tabs", () => {
+    const { q, click } = detail();
     click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
     expect(q("#cart-card strong").textContent).toBe("PHP\u00a0100");
-    expect(q(".totals .total-card:nth-child(2) strong").textContent).toBe("PHP\u00a0130");
     expect(q("#cart-tab").textContent).toContain("In cart 1");
-  });
-
-  it("shows the progress label, count and bar, and updates them as items are checked", () => {
-    const { q, click } = setup([rice, eggs]);
-    const bar = () => q<HTMLElement>("[role=progressbar]");
-    expect(q("#item-count").textContent).toBe("0 / 2");
-    expect(bar().getAttribute("aria-valuenow")).toBe("0");
-    expect(bar().getAttribute("aria-valuemax")).toBe("2");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(0)");
-
-    click<HTMLInputElement>("li input[type=checkbox]:not(.select-item)");
-    expect(q("#item-count").textContent).toBe("1 / 2");
-    expect(q("#item-count").getAttribute("aria-label")).toBe("1 of 2 items in cart");
-    expect(bar().getAttribute("aria-valuenow")).toBe("1");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(0.5)");
-
-    click<HTMLInputElement>("#check-all");
-    expect(q("#item-count").textContent).toBe("2 / 2");
-    expect(bar().firstElementChild!.getAttribute("style")).toContain("scaleX(1)");
-  });
-
-  it("keeps the progress count and bar on both tabs and with an empty list", () => {
-    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q("#item-count").textContent).toBe("1 / 2");
-    click<HTMLButtonElement>("#needed-tab");
-    expect(q("#item-count").textContent).toBe("1 / 2");
-
-    const empty = setup();
-    expect(empty.q("#item-count").textContent).toBe("0 / 0");
-    expect(empty.q("[role=progressbar]").firstElementChild!.getAttribute("style")).toContain("scaleX(0)");
-  });
-
-  it("filters items into Still needed and In cart tabs as their checked state changes", () => {
-    const { q, click } = setup([rice, eggs]);
-    expect(q("#needed-tab").textContent).toContain("Still needed 2");
-    expect(q("#cart-tab").textContent).toContain("In cart 0");
-    expect(q("#list").textContent).toContain("Rice");
-
-    click<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)');
-    expect(q("#list").textContent).not.toContain("Rice");
     expect(q("#needed-tab").textContent).toContain("Still needed 1");
-    expect(q("#cart-tab").textContent).toContain("In cart 1");
-
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q("#list").textContent).toContain("Rice");
-    click<HTMLInputElement>('li input[type="checkbox"]:not(.select-item)');
-    expect(q("#needed-tab").getAttribute("aria-selected")).toBe("false");
-    click<HTMLButtonElement>("#needed-tab");
-    expect(q("#list").textContent).toContain("Rice");
+    expect(q("#item-count").textContent).toBe("1 / 2");
+    expect(q("[role=progressbar]").getAttribute("aria-valuenow")).toBe("1");
+    expect(q("#list").textContent).not.toContain("Rice");
   });
 
-  it("shows a tab-specific empty state after marking every item in cart", () => {
-    const { q, click } = setup([rice, eggs]);
-    click<HTMLInputElement>("#check-all");
+  it("filters the tabs and shows a tab-specific empty state", () => {
+    const { q, click } = detail();
+    click("#check-all");
     expect(q("#needed-tab").textContent).toContain("Still needed 0");
-    expect(q<HTMLElement>("#empty-state").hidden).toBe(false);
     expect(q("#empty-state").textContent).toBe("Everything is in your cart.");
-    click<HTMLButtonElement>("#cart-tab");
+    click("#cart-tab");
     expect(q("#list").textContent).toContain("Rice");
     expect(q("#list").textContent).toContain("Eggs");
+    expect(q("#finish-trip")).not.toBeNull();
   });
 
-  it("flags the cart card when over budget", () => {
-    const { q } = setup([{ ...rice, checked: true }], 80);
-    expect(q("#cart-card").getAttribute("aria-label")).toContain("over today's budget");
-    expect(q("#budget-status").textContent).toContain("Over by");
+  it("says why the list is empty on both tabs", () => {
+    const none = detail([]);
+    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
+    none.click("#cart-tab");
+    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
+
+    const some = detail([rice]);
+    some.click("#cart-tab");
+    expect(some.q("#empty-state").textContent).toBe("No items in your cart yet.");
   });
 
-  it("saves a new budget from the form", () => {
-    const { q, submit, storage } = setup();
-    q<HTMLInputElement>("#budget-input").value = "500";
-    submit("#budget-form");
-    expect(storage.saveDailyBudget).toHaveBeenCalledWith(500);
-    expect(q("#budget-status").textContent).toContain("Remaining");
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0500");
-  });
-
-  it("deletes selected items after confirming", () => {
-    const { q, click } = setup([rice, eggs]);
-    click<HTMLButtonElement>("#toggle-select");
-    click<HTMLInputElement>(".select-item");
-    click<HTMLButtonElement>("#delete-selected");
-    expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
-    click<HTMLButtonElement>("#confirm-delete");
-    expect(q("#list").textContent).not.toContain("Rice");
-    expect(q("#list").textContent).toContain("Eggs");
-  });
-
-  it("selects all for bulk deletion only in the active tab", () => {
-    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
-    click<HTMLButtonElement>("#toggle-select");
-    click<HTMLInputElement>("#select-all");
-    expect(q<HTMLInputElement>('.select-item[aria-label="Select Eggs for deletion"]').checked).toBe(true);
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q<HTMLInputElement>("#select-all").checked).toBe(false);
-    click<HTMLInputElement>("#select-all");
-    click<HTMLButtonElement>("#delete-selected");
-    click<HTMLButtonElement>("#confirm-delete");
-    click<HTMLButtonElement>("#needed-tab");
-    expect(q("#list").textContent).toContain("Eggs");
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q("#list").textContent).not.toContain("Rice");
-  });
-
-  it("shows the title, the settings button and the spending totals", () => {
-    const { q } = setup([rice]);
-    expect(q("header h1").textContent).toBe("Shopping list");
-    expect(q("#open-settings")).not.toBeNull();
-    expect(q("#collapse-header")).toBeNull();
-    expect(q("#cart-card strong").textContent).toBe("PHP\u00a00");
-    expect(q(".totals .total-card:nth-child(2) strong").textContent).toBe("PHP\u00a0100");
-  });
-
-  it("has no pinned 'Start a new trip' footer, and 'Mark all in cart' resets the list", () => {
-    const { q, click } = setup([{ ...rice, checked: true }, { ...eggs, checked: true }]);
-    expect(q("footer")).toBeNull();
-    expect(q("#uncheck")).toBeNull();
-    click<HTMLInputElement>("#check-all"); // all are checked, so this unchecks everything
-    expect(q("#needed-tab").textContent).toContain("Still needed 2");
-    expect(q("#cart-tab").textContent).toContain("In cart 0");
-  });
-
-  it("opens the settings list, shows the app version on About, and returns", () => {
-    const { q, click } = setup();
-    click<HTMLButtonElement>("#open-settings");
-    expect(q<HTMLElement>("#home-page").hidden).toBe(true);
-    expect(q<HTMLElement>("#settings-page").hidden).toBe(false);
-    expect(q<HTMLElement>("#settings-home").textContent).toContain("About");
-    expect(q("#settings-home a")).toBeNull();
-    click<HTMLButtonElement>("#open-about");
-    expect(q("#settings-title").textContent).toBe("About");
-    expect(q("#about-page").textContent).toContain(`v${version}`);
-    expect(q("#close-settings").getAttribute("aria-label")).toContain("Settings");
-    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`);
-    click<HTMLButtonElement>("#close-settings");
-    expect(q<HTMLElement>("#settings-home").hidden).toBe(false);
-    expect(q("#settings-title").textContent).toBe("Settings");
-    click<HTMLButtonElement>("#close-settings");
-    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
-  });
-
-  it("increments and decrements quantity without going below zero", () => {
-    const { q, click, storage } = setup([eggs]);
-    const qty = q<HTMLInputElement>(".qty");
-
-    click<HTMLButtonElement>('[aria-label="Increase quantity of Eggs"]');
-    expect(qty.value).toBe("2");
+  it("edits quantity and price without leaving the row", () => {
+    const { q, click, type } = detail([eggs]);
+    click('[aria-label="Increase quantity of Eggs"]');
+    expect(q<HTMLInputElement>(".qty").value).toBe("2");
     expect(q(".item-subtotal").textContent).toContain("PHP\u00a060");
 
-    click<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]');
-    click<HTMLButtonElement>('[aria-label="Decrease quantity of Eggs"]');
-    expect(qty.value).toBe("0");
+    click('[aria-label="Decrease quantity of Eggs"]');
+    click('[aria-label="Decrease quantity of Eggs"]');
+    expect(q<HTMLInputElement>(".qty").value).toBe("0");
     expect(q(".item-subtotal").textContent).toContain("PHP\u00a00");
-    expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...eggs, qty: 0 }]);
+
+    type(".price", "12.5");
+    expect(q(".item-subtotal").textContent).toContain("PHP\u00a00"); // qty is still 0
   });
 
-  it("keeps typed quantity edits and shows the item name in the title row", () => {
-    const longNameItem = { ...eggs, name: "A very long grocery item name" };
-    const { q, storage } = setup([longNameItem]);
-    const qty = q<HTMLInputElement>(".qty");
-    act(() => {
-      qty.value = "3";
-      qty.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-
-    expect(q(".item-title-row .name").textContent).toBe(longNameItem.name);
-    expect(q(".item-title-row .item-subtotal").textContent).toContain("PHP\u00a090");
-    expect(storage.saveItems).toHaveBeenLastCalledWith([{ ...longNameItem, qty: 3 }]);
+  it("keeps typed quantity edits and uses a numeric keypad", () => {
+    const { q, type } = detail([eggs]);
+    type(".qty", "3");
+    expect(q<HTMLInputElement>(".qty").value).toBe("3");
+    expect(q(".item-subtotal").textContent).toContain("PHP\u00a090");
+    expect(q<HTMLInputElement>(".qty").inputMode).toBe("numeric");
+    expect(q<HTMLInputElement>(".price").inputMode).toBe("decimal");
+    expect(q(".price").className).toContain("text-right");
   });
 
-  it("reveals and confirms single-item deletion from the swipe action", () => {
-    const { q, click, storage } = setup([rice, eggs]);
-    const swipeDelete = q<HTMLButtonElement>('[aria-label="Delete Rice"]');
-    act(() => swipeDelete.click());
+  it("deletes immediately with the x button and offers Undo", () => {
+    const { q, click } = detail();
+    click('.del[aria-label="Delete Rice"]');
+    expect(q("#list").textContent).not.toContain("Rice");
+    expect(q<HTMLElement>("#undo-banner")!.hidden).toBe(false);
+    expect(q("#undo-message").textContent).toBe("Rice deleted.");
+    click("#undo-delete");
+    expect(q("#list").textContent).toContain("Rice");
+    expect(q<HTMLElement>("#undo-banner")!.hidden).toBe(true);
+  });
 
+  it("asks before deleting from the swipe action", () => {
+    const { q, click } = detail();
+    act(() => q<HTMLButtonElement>('.swipe-delete[aria-label="Delete Rice"]').click());
     expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
     expect(q("#delete-confirm-message").textContent).toContain("Rice");
-    click<HTMLButtonElement>("#confirm-delete");
-
+    click("#confirm-delete");
     expect(q("#list").textContent).not.toContain("Rice");
-    expect(q("#list").textContent).toContain("Eggs");
-    expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
   });
 
-  it("deletes immediately when the per-item x button is clicked", () => {
-    const { q, click, storage } = setup([rice, eggs]);
-    click<HTMLButtonElement>('.del[aria-label="Delete Rice"]');
-
-    expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(false);
+  it("selects all visible items for bulk deletion", () => {
+    const { q, click } = detail();
+    click("#toggle-select");
+    click("#select-all");
+    click("#delete-selected");
+    expect(q<HTMLDialogElement>("#confirm-delete-dialog").open).toBe(true);
+    click("#confirm-delete");
     expect(q("#list").textContent).not.toContain("Rice");
-    expect(q("#list").textContent).toContain("Eggs");
-    expect(storage.saveItems).toHaveBeenLastCalledWith([eggs]);
-    expect(q<HTMLElement>("#undo-banner").hidden).toBe(false);
-    click<HTMLButtonElement>("#undo-delete");
-    expect(q("#list").textContent).toContain("Rice");
-    expect(q<HTMLElement>("#undo-banner").hidden).toBe(true);
+    expect(q<HTMLElement>("#bulk-actions")!.hidden).toBe(true);
+    expect(q("#toggle-select").textContent).toBe("Select");
   });
 
-  it("finishes a trip from the In cart tab, then shows the receipt in Settings", () => {
-    const { q, click, storage } = setup([{ ...rice, checked: true }, eggs], 150);
-    expect(document.querySelector("#finish-trip")).toBeNull(); // only rendered on the In cart tab
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q<HTMLElement>("#finish-trip").hidden).toBe(false);
+  it("finishes a trip, resets the list, and shows the receipt in History", () => {
+    const { q, click, saved } = detail([{ ...rice, checked: true }, eggs], {});
+    expect(document.querySelector("#finish-trip")).toBeNull(); // only on the In cart tab
+    click("#cart-tab");
     expect(q("#finish-trip").textContent).toContain("PHP\u00a0100");
+    click("#finish-trip");
 
-    click<HTMLButtonElement>("#finish-trip");
-    expect(storage.saveReceipts).toHaveBeenCalledTimes(1);
+    expect(saved().receipts).toHaveLength(1);
+    expect(saved().receipts[0]).toMatchObject({ total: 100, listName: "My list", lines: [{ name: "Rice", qty: 2, price: 50 }] });
     expect(q("#cart-card strong").textContent).toBe("PHP\u00a00");
-    expect(q<HTMLElement>("#notice-banner").hidden).toBe(false);
+    expect(q<HTMLElement>("#notice-banner")!.hidden).toBe(false);
+    expect(q("#notice-message").textContent).toContain("Receipt saved");
     expect(q("#needed-tab").getAttribute("aria-selected")).toBe("true");
 
-    click<HTMLButtonElement>("#open-settings");
-    expect(q("#receipts-count").textContent).toBe("1");
-    click<HTMLButtonElement>("#open-receipts");
-    expect(q("#settings-title").textContent).toBe("Receipts");
-    expect(q("#receipts-list").textContent).toContain("1 item");
-    expect(q("#receipts-list").textContent).toContain("PHP\u00a0100");
-
-    click<HTMLButtonElement>("#receipts-list button");
-    expect(q("#settings-title").textContent).toBe("Receipt");
+    click("#nav-history");
+    expect(q("#history-page")).not.toBeNull();
+    expect(q("#receipts-list").textContent).toContain("My list");
+    click("#receipts-list button");
     expect(q("#receipt-detail").textContent).toContain("Rice");
-    expect(q("#receipt-detail").textContent).toContain("2 × ");
     expect(q("#receipt-detail").textContent).not.toContain("Eggs");
     expect(q("#receipt-total").textContent).toContain("PHP\u00a0100");
-    expect(q("#receipt-budget").textContent).toContain("Left for todayPHP\u00a050");
-
-    click<HTMLButtonElement>("#close-settings"); // back to the receipts list
-    expect(q("#settings-title").textContent).toBe("Receipts");
-    click<HTMLButtonElement>("#close-settings"); // back to Settings
-    expect(q("#settings-title").textContent).toBe("Settings");
-    click<HTMLButtonElement>("#close-settings"); // back to the list
-    expect(q<HTMLElement>("#home-page").hidden).toBe(false);
   });
 
   it("disables Finish trip while the cart is empty", () => {
-    const { q, click } = setup([rice]);
-    click<HTMLButtonElement>("#cart-tab");
+    const { q, click } = detail([rice]);
+    click("#cart-tab");
     expect(q<HTMLButtonElement>("#finish-trip").disabled).toBe(true);
+    expect(q("#finish-trip").textContent).toBe("Finish trip");
   });
 
-  it("shows an empty state when there are no receipts", () => {
-    const { q, click } = setup();
-    click<HTMLButtonElement>("#open-settings");
-    expect(q("#receipts-count")).toBeNull();
-    click<HTMLButtonElement>("#open-receipts");
-    expect(q("#receipts-empty").textContent).toBe("No receipts yet.");
+  it("keeps Finish trip and the add bar outside the scrolling list", () => {
+    const { q, click } = detail([{ ...rice, checked: true }, eggs]);
+    click("#cart-tab");
+    expect(q("#list-detail-page main").contains(q("#finish-trip"))).toBe(false);
+    expect(q("#list-detail-page main").contains(q("#add-form"))).toBe(false);
+    expect(q(".detail-bottom").contains(q("#finish-trip"))).toBe(true);
+    expect(q(".detail-bottom").contains(q("#add-form"))).toBe(true);
   });
 
-  it("deletes a receipt only after confirming", () => {
-    const saved: Receipt = { id: "r1", finishedAt: "2026-10-30T08:00:00.000Z", currency: "PHP", lines: [{ name: "Rice", qty: 2, price: 50 }], total: 100, budget: null };
-    const { q, click, storage } = setup([], null, [saved]);
-    click<HTMLButtonElement>("#open-settings");
-    click<HTMLButtonElement>("#open-receipts");
-    click<HTMLButtonElement>("#receipts-list button");
-    expect(q("#receipt-budget")).toBeNull(); // no budget was set that day
-
-    click<HTMLButtonElement>("#delete-receipt");
-    expect(q<HTMLDialogElement>("#receipt-confirm-delete-dialog").open).toBe(true);
-    click<HTMLButtonElement>("#receipt-cancel-delete");
-    expect(q("#receipt-detail")).not.toBeNull();
-    expect(storage.saveReceipts).not.toHaveBeenCalled();
-
-    click<HTMLButtonElement>("#delete-receipt");
-    click<HTMLButtonElement>("#receipt-confirm-delete");
-    expect(storage.saveReceipts).toHaveBeenLastCalledWith([]);
-    expect(q("#settings-title").textContent).toBe("Receipts");
-    expect(q("#receipts-empty")).not.toBeNull();
-  });
-
-  it("edits the budget in a bottom sheet opened from the budget row, and can clear it", () => {
-    const { q, click, submit, storage } = setup([{ ...rice, checked: true }], 500);
-    expect(q("#budget-row").textContent).toContain("PHP\u00a0500");
-    expect(q("#budget-status").textContent).toContain("Remaining");
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0400");
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
-
-    click<HTMLButtonElement>("#budget-row");
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
-    expect(q<HTMLInputElement>("#budget-input").value).toBe("500");
-    q<HTMLInputElement>("#budget-input").value = "300";
-    submit("#budget-form");
-    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(300);
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
-    expect(q("#budget-status").textContent).toContain("PHP\u00a0200");
-
-    click<HTMLButtonElement>("#budget-row");
-    expect(q<HTMLInputElement>("#budget-input").value).toBe("300"); // reopened with the saved value
-    click<HTMLButtonElement>("#clear-budget");
-    expect(storage.saveDailyBudget).toHaveBeenLastCalledWith(null);
-    expect(q("#budget-row").textContent).toContain("Not set");
-    expect(q("#budget-status").textContent).toBe("Set budget");
-    expect(q("#clear-budget")).toBeNull();
-  });
-
-  it("keeps the budget sheet open on an invalid amount and closes it with Esc without saving", () => {
-    const { q, click, submit, storage } = setup([], 100);
-    click<HTMLButtonElement>("#budget-row");
-    q<HTMLInputElement>("#budget-input").value = "-5";
-    submit("#budget-form");
-    expect(storage.saveDailyBudget).not.toHaveBeenCalled();
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
-    expect(q("#budget-preview").textContent).toContain("valid amount");
-
-    act(() => { q("#budget-sheet").dispatchEvent(new Event("cancel", { cancelable: true })); });
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(false);
-    expect(storage.saveDailyBudget).not.toHaveBeenCalled();
-  });
-
-  it("previews the remaining budget while typing in the sheet", () => {
-    const { q, click } = setup([{ ...rice, checked: true }], 500);
-    click<HTMLButtonElement>("#budget-row");
-    const input = q<HTMLInputElement>("#budget-input");
-    act(() => {
-      input.value = "80";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    expect(q("#budget-preview").textContent).toBe("Over byPHP\u00a020");
-  });
-
-  it("shows the summary card: cart, planned, today's budget and what is left", () => {
-    const { q } = setup([{ ...rice, checked: true }, eggs], 500);
-    const card = q("section[aria-label='Spending summary']");
-    expect(card.contains(q("#cart-card"))).toBe(true);
-    expect(card.contains(q("#budget-row"))).toBe(true);
-    expect(q("#cart-card").textContent).toContain("In your cart");
-    expect(q("#cart-card strong").textContent).toBe("PHP\u00a0100");
-    expect(q(".totals .total-card:nth-child(2)").textContent).toContain("Planned total");
-    expect(q(".totals .total-card:nth-child(2) strong").textContent).toBe("PHP\u00a0130");
-    expect(q("#budget-row").textContent).toContain("Today’s budget");
-    expect(q("#budget-row").textContent).toContain("PHP\u00a0500");
-    expect(q("#budget-status").textContent).toBe("RemainingPHP\u00a0400");
-  });
-
-  it("labels the budget by state: Over by, exactly on budget, and not set", () => {
-    const over = setup([{ ...rice, checked: true }], 80);
-    expect(over.q("#budget-status").textContent).toBe("Over byPHP\u00a020");
-    expect(over.q("#budget-status span:last-child").className).toContain("--color-danger"); // destructive text, not orange
-
-    const exact = setup([{ ...rice, checked: true }], 100);
-    expect(exact.q("#budget-status").textContent).toBe("RemainingPHP\u00a00");
-
-    const none = setup([rice]);
-    expect(none.q("#budget-row").textContent).toContain("Not set");
-    expect(none.q("#budget-status").textContent).toBe("Set budget");
-  });
-
-  it("opens the budget sheet from the whole budget row", () => {
-    const { q, click } = setup([], 100);
-    click<HTMLButtonElement>("#budget-row");
-    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
-  });
-
-  it("is flat: no green header, no gradient, and the cards use the surface color", () => {
-    const { q } = setup([rice], 100);
-    expect(document.querySelector(".hero")).toBeNull();
-    expect(q("#app-header").className).not.toMatch(/hero|gradient|green/);
-    expect(q("#app-bar").outerHTML).not.toMatch(/gradient/);
-    expect(q("section[aria-label='Spending summary']").className).toContain("bg-[var(--color-surface)]");
-  });
-
-  it("gives every control on the Home top a 48dp touch target", () => {
-    const { q } = setup([rice], 100);
-    for (const sel of ["#open-settings", "#budget-row", "#add-form button", "#needed-tab", "#cart-tab"]) {
-      expect(q(sel).className, sel).toMatch(/(^|\s)tap(\s|$)/);
-    }
-    expect(q("#new-name").className).not.toMatch(/\bh-\d|\bmin-h-\[?\d/); // the base input style already gives it 48px
-  });
-
-  it("has the new add form: an 'Add an item' field and a '+ Add' button", () => {
-    const { q } = setup();
-    expect(q<HTMLInputElement>("#new-name").placeholder).toBe("Add an item");
-    expect(q("#add-form button").textContent?.trim()).toBe("Add");
-    expect(q("#add-form button svg")).not.toBeNull(); // the plus icon
-  });
-
-  it("lets the add form wrap, so the button drops below the field when it can't fit", () => {
-    const { q } = setup();
-    expect(q("#add-form").className).toContain("flex-wrap");
-  });
-
-  it("shows tab counts as plain numbers after the label, and lets the tabs grow with the text", () => {
-    const { q } = setup([rice, eggs]);
-    expect(q("#needed-tab").textContent).toBe("Still needed 2");
-    expect(q("#cart-tab").textContent).toBe("In cart 0");
-    expect(q("#needed-tab").className).not.toContain("whitespace-nowrap");
-    expect(q("#needed-tab span.rounded-full, #needed-tab span[class*='rounded-[10px]']")).toBeNull(); // no count pill
-  });
-
-  it("scales the progress bar instead of resizing it, so it never triggers layout", () => {
-    const { q } = setup([{ ...rice, checked: true }, eggs]);
-    const fill = q<HTMLElement>("[role=progressbar] > span");
-    expect(fill.className).toContain("transition-transform");
-    expect(fill.className).not.toMatch(/transition-\[?width/);
-    expect(fill.getAttribute("style")).not.toContain("width");
-  });
-
-  it("lays a row out as checkbox, name and Line total, then labeled editors, then remove", () => {
-    const { q } = setup([rice]);
+  it("lays out each row as checkbox, name and line total, labeled editors, then remove", () => {
+    const { q } = detail([rice]);
     const li = q("#list li");
     expect(li.querySelector(".item-title-row .name")!.textContent).toBe("Rice");
     expect(li.querySelector(".item-title-row .item-subtotal")!.textContent).toBe("Line totalPHP\u00a0100");
@@ -468,107 +399,162 @@ describe("grocery app", () => {
     expect(editors.textContent).toContain("Unit price · PHP");
     expect(editors.querySelector(".quantity-control .qty")).not.toBeNull();
     expect(editors.querySelector(".price")).not.toBeNull();
-    expect(editors.querySelector(".del")).not.toBeNull(); // remove has its own area, last in the row
     expect(editors.lastElementChild).toBe(editors.querySelector(".del"));
   });
 
-  it("puts the rows in one card with dividers, not separate cards", () => {
-    const { q } = setup([rice, eggs]);
-    expect(q("#list").className).toContain("rounded-2xl");
-    expect(q("#list").className).toContain("bg-[var(--color-surface)]");
-    const row = q("#list li").className;
-    expect(row).toContain("border-b");
-    expect(row).not.toMatch(/\bmb-|rounded-\[|shadow-|\bborder\b(?!-)/); // no gap, own radius, shadow or full border
-  });
-
-  it("gives every row control a 48dp target: checkbox, the three quantity areas, price and remove", () => {
-    const { q } = setup([rice]);
+  it("gives every row control a 48dp target", () => {
+    const { q, qa } = detail([rice]);
     expect(q(".item-check").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q(".select-item").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q(".quantity-control").className).toContain("w-[144px]"); // 48 + 48 + 48
+    expect(q(".quantity-control").className).toContain("w-[144px]");
     expect(q(".quantity-control").className).toContain("h-[48px]");
-    for (const step of document.querySelectorAll(".qty-step")) expect(step.className).toContain("h-[48px] w-[48px]");
+    for (const step of qa(".qty-step")) expect(step.className).toContain("h-[48px] w-[48px]");
     expect(q(".qty").className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q(".qty").className).toContain("w-[48px]");
     expect(q(".del").className).toMatch(/(^|\s)tap(\s|$)/);
-  });
-
-  it("lets the editors wrap so they stack at 320dp or large text, with remove staying in its own area", () => {
-    const { q } = setup([rice]);
-    expect(q(".item-details-row").className).toContain("flex-wrap");
-    expect(q(".price").parentElement!.className).toContain("min-w-[128px]");
-    expect(q(".price").parentElement!.className).toContain("flex-1");
-    expect(q(".del").className).toContain("shrink-0");
-  });
-
-  it("uses a numeric keypad for quantity and a decimal one for price, and right-aligns the numbers", () => {
-    const { q } = setup([rice]);
-    expect(q<HTMLInputElement>(".qty").inputMode).toBe("numeric");
-    expect(q<HTMLInputElement>(".price").inputMode).toBe("decimal");
-    expect(q(".price").className).toContain("text-right");
-    expect(q(".item-subtotal").className).toContain("text-right");
-    expect(q(".item-subtotal strong, .item-subtotal span:last-child").className).toContain("num");
-  });
-
-  it("strikes through the name of a checked item and fades nothing else", () => {
-    const unchecked = setup([rice]);
-    const uncheckedEditors = unchecked.q(".item-details-row").outerHTML;
-    const uncheckedTotal = unchecked.q(".item-subtotal").outerHTML;
-    expect(unchecked.q(".name").className).not.toContain("line-through");
-
-    const checked = setup([{ ...rice, checked: true }]);
-    checked.click<HTMLButtonElement>("#cart-tab");
-    expect(checked.q("#list li").className).toContain("done");
-    expect(checked.q("#list li").className).not.toMatch(/opacity/);
-    expect(checked.q(".name").className).toContain("line-through");
-    expect(checked.q(".name").className).not.toMatch(/opacity|muted/);
-    expect(checked.q(".item-details-row").outerHTML).toBe(uncheckedEditors); // quantity, price and remove look identical
-    expect(checked.q(".item-subtotal").outerHTML).toBe(uncheckedTotal);
-  });
-
-  it("keeps Mark all in cart and Select as 48dp targets", () => {
-    const { q } = setup([rice]);
     expect(q("#check-all").closest("label")!.className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q("#check-all").closest("label")!.textContent).toContain("Mark all in cart"); // the whole label is the target
     expect(q("#toggle-select").className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q("#toggle-select").textContent).toBe("Select");
   });
 
-  it("says why the list is empty: no items, everything in the cart, or nothing in the cart yet", () => {
-    const none = setup();
-    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
-    none.click<HTMLButtonElement>("#cart-tab");
-    expect(none.q("#empty-state").textContent).toBe("Your list is empty.");
-    expect(none.q("#needed-tab").textContent).toBe("Still needed 0"); // honest counts, and both tabs stay
-
-    const some = setup([rice]);
-    some.click<HTMLButtonElement>("#cart-tab");
-    expect(some.q<HTMLElement>("#empty-state").hidden).toBe(false);
-    expect(some.q("#empty-state").textContent).toBe("No items in your cart yet.");
-
-    const allIn = setup([{ ...rice, checked: true }]);
-    expect(allIn.q("#empty-state").textContent).toBe("Everything is in your cart.");
+  it("puts the rows in one card with dividers and strikes through checked names only", () => {
+    const { q, click } = detail([{ ...rice, checked: true }]);
+    expect(q("#list").className).toContain("item-list");
+    click("#cart-tab");
+    expect(q("#list li").className).toContain("done");
+    expect(q(".name").className).toContain("line-through");
+    expect(q(".item-details-row").outerHTML).not.toMatch(/line-through|opacity/);
   });
 
-  it("pins Finish trip in a footer, only on In cart, so the list scrolls above it", () => {
-    const { q, click } = setup([{ ...rice, checked: true }, eggs]);
-    expect(document.querySelector("footer")).toBeNull(); // Still needed: no footer at all
-    click<HTMLButtonElement>("#cart-tab");
-    const footer = q("footer");
-    expect(footer.contains(q("#finish-trip"))).toBe(true);
-    expect(q("#home-page main").contains(footer)).toBe(false); // outside the scroller, so it never covers the last row
-    expect(q("#finish-trip").textContent).toBe("Finish trip · PHP\u00a0100"); // the total stays in the label
-    expect(q("#finish-trip").className).toMatch(/(^|\s)tap(\s|$)/);
-    expect(q("#finish-trip").className).toContain("w-full");
-    expect(footer.className).toContain("env(safe-area-inset-bottom");
-    click<HTMLButtonElement>("#needed-tab");
-    expect(document.querySelector("footer")).toBeNull();
+  it("shows the budget row and opens the sheet from it", () => {
+    const { q, click } = setup({ state: stateWith([{ ...rice, checked: true }]), budget: 500, hash: "#/lists/list-1" });
+    expect(q("#budget-row").textContent).toContain("PHP\u00a0500");
+    expect(q("#budget-status").textContent).toBe("PHP\u00a0400 left");
+    click("#budget-row");
+    expect(q<HTMLDialogElement>("#budget-sheet").open).toBe(true);
+  });
+});
+
+describe("Settings and routing", () => {
+  it("navigates with the bottom bar and marks the current tab", () => {
+    const { q, click } = setup();
+    expect(q("#nav-home").getAttribute("aria-current")).toBe("page");
+    click("#nav-lists");
+    expect(q("#lists-page")).not.toBeNull();
+    expect(q("#nav-lists").getAttribute("aria-current")).toBe("page");
+    click("#nav-history");
+    expect(q("#history-page")).not.toBeNull();
+    click("#nav-settings");
+    expect(q("#settings-page")).not.toBeNull();
+    expect(q("#nav-settings").getAttribute("aria-current")).toBe("page");
   });
 
-  it("shows plain 'Finish trip' and disables it while the cart is empty", () => {
-    const { q, click } = setup([rice]);
-    click<HTMLButtonElement>("#cart-tab");
-    expect(q("#finish-trip").textContent).toBe("Finish trip");
-    expect(q<HTMLButtonElement>("#finish-trip").disabled).toBe(true);
+  it("shows only Currency and About in Settings", () => {
+    const { q, click } = setup();
+    click("#nav-settings");
+    expect(q("#settings-home").textContent).toContain("Currency");
+    expect(q("#settings-home").textContent).toContain("About");
+    expect(q("#open-receipts")).toBeNull();
+    expect(q("#currency-value").textContent).toBe("PHP");
+  });
+
+  it("opens About, shows the version and links to the release", () => {
+    const { q, click } = setup();
+    click("#nav-settings");
+    click("#open-about");
+    expect(q("#settings-title").textContent).toBe("About");
+    expect(q("#about-page").textContent).toContain(`v${version}`);
+    expect(q<HTMLAnchorElement>("#about-page a").href).toBe(`https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`);
+    click("#close-settings");
+    expect(q("#settings-title").textContent).toBe("Settings");
+    click("#close-settings");
+    expect(q("#home-page")).not.toBeNull();
+  });
+
+  it("returns to Home from Settings with Back", () => {
+    const { q, click } = setup({ hash: "#/settings" });
+    click("#close-settings");
+    expect(q("#home-page")).not.toBeNull();
+  });
+
+  it("redirects an unknown list to Lists with a notice", () => {
+    const { q } = setup({ hash: "#/lists/missing" });
+    expect(q("#lists-page")).not.toBeNull();
+    expect(q<HTMLElement>("#notice-banner")!.hidden).toBe(false);
+    expect(q("#notice-message").textContent).toContain("couldn’t be found");
+  });
+
+  it("redirects an unknown receipt to History with a notice", () => {
+    const { q } = setup({ hash: "#/history/missing" });
+    expect(q("#history-page")).not.toBeNull();
+    expect(q("#notice-message").textContent).toContain("couldn’t be found");
+  });
+
+  it("supports a deep link straight to a list", () => {
+    const { q } = setup({ state: stateWith(), hash: "#/lists/list-1" });
+    expect(q("#list-detail-page")).not.toBeNull();
+    expect(q("#list-detail-title").textContent).toBe("My list");
+  });
+
+  it("keeps the add form and tabs accessible at the designed sizes", () => {
+    const { q } = setup({ state: stateWith(), hash: "#/lists/list-1" });
+    expect(q<HTMLInputElement>("#new-name").placeholder).toBe("Add an item");
+    expect(q("#add-form button").textContent?.trim()).toBe("Add");
+    expect(q("#add-form button svg")).not.toBeNull();
+    expect(q("#needed-tab").textContent).toBe("Still needed 2");
+    expect(q("#cart-tab").textContent).toBe("In cart 0");
+    expect(q("#needed-tab span.rounded-full")).toBeNull();
+  });
+});
+
+describe("History", () => {
+  const receipts = [
+    makeReceipt({ id: "r1", storeName: "Market", finishedAt: "2026-11-20T10:00:00.000Z", total: 250, budget: 500, lines: [{ name: "Rice", qty: 2, price: 50 }, { name: "Milk", qty: 1, price: 150 }] }),
+    makeReceipt({ id: "r2", listName: "Bakery run", finishedAt: "2026-11-02T10:00:00.000Z", total: 100 }),
+    makeReceipt({ id: "r3", finishedAt: "2026-10-15T10:00:00.000Z", total: 75 }),
+  ];
+
+  it("groups receipts by month with a monthly summary", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 22, 12, 0, 0));
+    try {
+      const { q } = setup({ state: makeState({ receipts }), hash: "#/history" });
+      expect(q("#history-page").textContent).toContain("History");
+      expect(q("#receipts-list").textContent).toContain("Market");
+      expect(q("#receipts-list").textContent).toContain("Bakery run");
+      expect(q("#history-page").textContent).toContain("2 trips");
+      expect(q("#history-page").textContent).toContain("PHP\u00a0350");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows an empty state with a way to start", () => {
+    const { q, click } = setup({ hash: "#/history" });
+    expect(q("#receipts-empty").textContent).toBe("No receipts yet.");
+    click("#history-page .new-list");
+    expect(q("#lists-page")).not.toBeNull();
+  });
+
+  it("opens a receipt and shows its lines and budget comparison", () => {
+    const { q, click } = setup({ state: makeState({ receipts }), hash: "#/history" });
+    click("#receipts-list button");
+    expect(q("#receipt-detail-page")).not.toBeNull();
+    expect(q("#receipt-total").textContent).toBe("PHP\u00a0250");
+    expect(q("#receipt-detail").textContent).toContain("2 × PHP\u00a050");
+    expect(q("#receipt-budget").textContent).toContain("PHP\u00a0500");
+    expect(q("#receipt-budget").textContent).toContain("PHP\u00a0250");
+  });
+
+  it("deletes a receipt only after confirming", () => {
+    const { q, click, saved } = setup({ state: makeState({ receipts }), hash: "#/history" });
+    click("#receipts-list button");
+    click("#delete-receipt");
+    expect(q<HTMLDialogElement>("#receipt-confirm-delete-dialog").open).toBe(true);
+    click("#receipt-cancel-delete");
+    expect(q("#receipt-detail")).not.toBeNull();
+    expect(saved().receipts).toHaveLength(3);
+
+    click("#delete-receipt");
+    click("#receipt-confirm-delete");
+    expect(saved().receipts.map((receipt) => receipt.id)).not.toContain("r1");
+    expect(q("#history-page")).not.toBeNull();
   });
 });

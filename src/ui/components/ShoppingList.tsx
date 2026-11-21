@@ -8,12 +8,10 @@ interface ShoppingListProps {
   allItems: Item[];
   visibleItems: Item[];
   activeTab: Tab;
-  doneCount: number;
   selectedIds: Set<string>;
   selectionMode: boolean;
   money: Money;
   pricePlaceholder: string;
-  onTabChange(tab: Tab): void;
   onCheckAll(checked: boolean): void;
   onSelectAll(checked: boolean): void;
   onToggleSelection(): void;
@@ -26,13 +24,13 @@ interface ShoppingListProps {
   onSwipeDelete(id: string, name: string): void;
 }
 
-export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, selectedIds, selectionMode, money, pricePlaceholder, onTabChange, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: ShoppingListProps) {
+export function ShoppingList({ allItems, visibleItems, activeTab, selectedIds, selectionMode, money, pricePlaceholder, onCheckAll, onSelectAll, onToggleSelection, onDeleteSelected, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: ShoppingListProps) {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const checkAllRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const neededCount = allItems.filter((item) => !item.checked).length;
   const selectedVisibleCount = visibleItems.filter((item) => selectedIds.has(item.id)).length;
-  const progress = allItems.length > 0 ? (doneCount / allItems.length) * 100 : 0;
+  const doneCount = allItems.length - neededCount;
 
   useEffect(() => {
     if (checkAllRef.current) checkAllRef.current.indeterminate = doneCount > 0 && doneCount < allItems.length;
@@ -41,50 +39,27 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
 
   return (
     <section className="list-section" aria-label="Your list">
-      <div className="mb-3">
-        <div className="mb-1.5 flex items-baseline justify-between gap-3 text-label">
-          <span id="progress-label" className="text-muted">Shopping progress</span>
-          <span id="item-count" className="num font-semibold text-ink" aria-label={`${doneCount} of ${allItems.length} items in cart`}>
-            {doneCount} / {allItems.length}
-          </span>
-        </div>
-        <div className="progress-track h-1 overflow-hidden rounded-full bg-[var(--color-track)]" role="progressbar" aria-labelledby="progress-label" aria-valuemin={0} aria-valuemax={allItems.length} aria-valuenow={doneCount}>
-          {/* Scaled, not resized: animating width would re-run layout. */}
-          <span className="block h-full origin-left rounded-[inherit] bg-[var(--color-green)] transition-transform duration-200 motion-reduce:transition-none" style={{ transform: `scaleX(${progress / 100})` }} />
-        </div>
-      </div>
-      <div className="sticky top-[var(--bar-h)] z-10 bg-app pb-2 pt-1">
-      <div className={`list-tabs relative isolate flex gap-[6px] rounded-xl bg-[var(--color-tabs-surface)] p-1 ${activeTab === "cart" ? "cart-active" : ""}`} role="tablist" aria-label="Filter grocery items">
-        <button id="needed-tab" className="list-tab tap relative z-[1] flex-1 rounded-lg bg-transparent px-3 py-2 text-tab font-semibold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "needed"} tabIndex={activeTab === "needed" ? 0 : -1} onClick={() => onTabChange("needed")}>
-          Still needed <span className="num ml-1">{neededCount}</span>
-        </button>
-        <button id="cart-tab" className="list-tab tap relative z-[1] flex-1 rounded-lg bg-transparent px-3 py-2 text-tab font-semibold text-[var(--color-tabs-muted)]" type="button" role="tab" aria-controls="list" aria-selected={activeTab === "cart"} tabIndex={activeTab === "cart" ? 0 : -1} onClick={() => onTabChange("cart")}>
-          In cart <span className="num ml-1">{allItems.length - neededCount}</span>
-        </button>
-      </div>
-      </div>
-
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <label className="tap inline-flex items-center gap-3 pr-3 text-body font-medium text-[var(--color-selection-muted)]">
+      <div className="list-toolbar">
+        <label className="tap inline-flex items-center gap-2.5 pr-2 text-label font-medium text-muted">
           <input ref={checkAllRef} id="check-all" type="checkbox" checked={allItems.length > 0 && doneCount === allItems.length} onChange={(event) => onCheckAll(event.currentTarget.checked)} />
           Mark all in cart
         </label>
-        <button id="toggle-select" className="tap rounded-xl bg-transparent px-3 text-body font-semibold text-ink" type="button" onClick={onToggleSelection}>
+        <button id="toggle-select" className="tap rounded-xl bg-transparent px-3 text-label font-medium text-ink" type="button" onClick={onToggleSelection}>
           {selectionMode ? "Cancel" : "Select"}
         </button>
       </div>
 
-      <div id="bulk-actions" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--color-selection-surface)] px-3" hidden={!selectionMode}>
-        <label className="tap inline-flex items-center gap-3 text-body font-medium text-[var(--color-selection-ink)]">
+      <div id="bulk-actions" className="bulk-actions" hidden={!selectionMode}>
+        <label className="tap inline-flex items-center gap-2.5 text-label font-medium text-ink">
           <input ref={selectAllRef} id="select-all" type="checkbox" checked={visibleItems.length > 0 && selectedVisibleCount === visibleItems.length} onChange={(event) => onSelectAll(event.currentTarget.checked)} />
           Select all to delete
         </label>
-        <button id="delete-selected" className="tap rounded-xl bg-[var(--color-danger-fill)] px-4 text-body font-semibold text-on-danger disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
+        <button id="delete-selected" className="tap rounded-xl bg-[var(--color-danger-fill)] px-4 text-label font-medium text-on-danger disabled:cursor-default disabled:opacity-45" type="button" disabled={selectedIds.size === 0} onClick={onDeleteSelected}>
           {selectedIds.size ? `Delete selected (${selectedIds.size})` : "Delete selected"}
         </button>
       </div>
 
-      <ul id="list" className="m-0 list-none overflow-hidden rounded-2xl bg-[var(--color-surface)] p-0">
+      <ul id="list" className="item-list">
         {visibleItems.map((item) => (
           <GroceryRow
             key={item.id}
@@ -104,7 +79,7 @@ export function ShoppingList({ allItems, visibleItems, activeTab, doneCount, sel
           />
         ))}
       </ul>
-      <p id="empty-state" className="m-0 rounded-2xl border border-dashed border-[var(--color-empty-border)] px-4 py-6 text-center text-body text-[var(--color-empty-muted)]" hidden={visibleItems.length > 0}>
+      <p id="empty-state" className="empty-state" hidden={visibleItems.length > 0}>
         {allItems.length === 0 ? "Your list is empty." : activeTab === "needed" ? "Everything is in your cart." : "No items in your cart yet."}
       </p>
     </section>

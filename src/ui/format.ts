@@ -41,3 +41,40 @@ export function formatReceiptDate(iso: string): string {
   if (Number.isNaN(date.getTime())) return "Unknown date";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
+
+/** "Sunday, Nov 22" for the Home eyebrow. */
+export function formatToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(now);
+}
+
+/** "Nov 1" (or "Nov 1, 2025" when the year differs from now). */
+export function formatShortDate(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) }).format(date);
+}
+
+/** "November 2026" from a "2026-11" month key. */
+export function formatMonthLabel(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+  if (!year || !month) return key;
+  return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+/** "Last shopped 3 days ago", "Last shopped today", or "Never shopped". */
+export function lastShoppedLabel(iso: string | null, now: Date = new Date()): string {
+  if (!iso) return "Never shopped";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Never shopped";
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const then = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round((start - then) / 86_400_000);
+  if (days <= 0) return "Last shopped today";
+  if (days === 1) return "Last shopped yesterday";
+  if (days < 7) return `Last shopped ${days} days ago`;
+  return `Last shopped ${formatShortDate(iso, now)}`;
+}
+
+export const itemCountLabel = (count: number): string => `${count} ${count === 1 ? "item" : "items"}`;
+export const tripCountLabel = (count: number): string => `${count} ${count === 1 ? "trip" : "trips"}`;
