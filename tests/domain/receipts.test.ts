@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addReceipt, buildReceipt, removeReceipt } from "../../src/domain/receipts";
+import { addReceipt, buildReceipt, itemsFromReceipt, removeReceipt } from "../../src/domain/receipts";
 import type { Item } from "../../src/domain/types";
 
 const rice: Item = { id: "1", name: "Rice", qty: 2, price: 50, checked: true };
@@ -15,6 +15,26 @@ describe("buildReceipt", () => {
       lines: [{ name: "Rice", qty: 2, price: 50 }],
       total: 100,
       budget: 150,
+      listId: null,
+      listName: null,
+      storeName: null,
+      remainingBudgetAtTime: null,
+    });
+  });
+
+  it("snapshots the list, store and remaining budget context", () => {
+    const receipt = buildReceipt([rice], {
+      ...ctx,
+      listId: "list-1",
+      listName: "Weekly shop",
+      storeName: "Market",
+      remainingBudgetAtTime: 50,
+    })!;
+    expect(receipt).toMatchObject({
+      listId: "list-1",
+      listName: "Weekly shop",
+      storeName: "Market",
+      remainingBudgetAtTime: 50,
     });
   });
 
@@ -38,5 +58,19 @@ describe("receipt list helpers", () => {
     const list = addReceipt(addReceipt([], a), b);
     expect(list.map((r) => r.id)).toEqual(["b", "a"]);
     expect(removeReceipt(list, "b").map((r) => r.id)).toEqual(["a"]);
+  });
+});
+
+describe("itemsFromReceipt", () => {
+  it("turns purchased lines into fresh unchecked items", () => {
+    const receipt = buildReceipt([rice, eggs], ctx)!;
+    let n = 0;
+    const items = itemsFromReceipt(receipt, () => `new-${++n}`);
+    expect(items).toEqual([{ id: "new-1", name: "Rice", qty: 2, price: 50, checked: false }]);
+  });
+
+  it("keeps every line, including a zero quantity", () => {
+    const receipt = buildReceipt([{ ...rice, qty: 0 }], ctx)!;
+    expect(itemsFromReceipt(receipt, () => "x")).toEqual([{ id: "x", name: "Rice", qty: 0, price: 50, checked: false }]);
   });
 });

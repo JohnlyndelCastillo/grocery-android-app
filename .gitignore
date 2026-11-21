@@ -47,3 +47,4 @@ docs/*
 docs/images/*
 !docs/images/grocery-app-v2.jpeg
 !docs/release-notes.md
+!docs/home-lists-history-implementation-approach.md
