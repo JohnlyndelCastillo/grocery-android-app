@@ -29,7 +29,9 @@ export const findList = (lists: ShoppingList[], id: string | null | undefined): 
 
 /** The active list, falling back to the most recently updated list. */
 export function activeListOf(state: AppStateV2): ShoppingList | null {
-  return findList(state.lists, state.activeListId) ?? mostRecentList(state.lists);
+  const live = liveLists(state.lists);
+  const active = findList(live, state.activeListId);
+  return active ?? mostRecentList(live);
 }
 
 export function mostRecentList(lists: ShoppingList[]): ShoppingList | null {

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { GroceryStorage } from "../storage/storage";
-import type { ShoppingList } from "../domain/types";
+import type { ShoppingList, Store } from "../domain/types";
 import { BudgetSheet } from "./components/BudgetSheet";
 import { BottomNav } from "./components/BottomNav";
 import { DeleteDialog } from "./components/DeleteDialog";
@@ -13,7 +13,7 @@ import { ListsPage } from "./components/ListsPage";
 import { NoticeBanner } from "./components/NoticeBanner";
 import { ReceiptDetailPage } from "./components/ReceiptDetailPage";
 import { RepeatTripDialog } from "./components/RepeatTripDialog";
-import { SettingsPage } from "./components/SettingsPage";
+import { SettingsPage, type SettingsPageView } from "./components/SettingsPage";
 import { StoreManagerDialog } from "./components/StoreManagerDialog";
 import { UndoBanner } from "./components/UndoBanner";
 import { useBackButton } from "./hooks/useBackButton";
@@ -35,9 +35,11 @@ export function App({ storage }: AppProps) {
   const [listDialog, setListDialog] = useState<ListDialogState>(null);
   const [actionsList, setActionsList] = useState<ShoppingList | null>(null);
   const [storesOpen, setStoresOpen] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [deleteList, setDeleteList] = useState<ShoppingList | null>(null);
   const [deleteReceiptId, setDeleteReceiptId] = useState<string | null>(null);
+  const [settingsView, setSettingsView] = useState<SettingsPageView>("settings");
 
   const selectedList = routeListId ? app.findList(routeListId) : null;
   const selectedReceipt = route.name === "receipt" ? app.receipts.find((receipt) => receipt.id === route.receiptId) ?? null : null;
@@ -74,12 +76,14 @@ export function App({ storage }: AppProps) {
     if (budgetOpen) { setBudgetOpen(false); return true; }
     if (listDialog) { setListDialog(null); return true; }
     if (actionsList) { setActionsList(null); return true; }
+    if (storeToDelete) { setStoreToDelete(null); setStoresOpen(true); return true; }
     if (storesOpen) { setStoresOpen(false); return true; }
     if (repeatOpen) { setRepeatOpen(false); return true; }
     if (deleteList) { setDeleteList(null); return true; }
     if (deleteReceiptId) { setDeleteReceiptId(null); return true; }
     if (app.pendingDelete) { app.cancelDelete(); return true; }
     if (app.selectionMode && route.name === "list") { app.toggleSelectionMode(); return true; }
+    if (route.name === "settings" && settingsView !== "settings") { setSettingsView("settings"); return true; }
     const parent = parentRoute(route);
     if (parent) { navigate(parent); return true; }
     if (route.name !== "home") { navigate({ name: "home" }); return true; }
@@ -91,12 +95,33 @@ export function App({ storage }: AppProps) {
   }
 
   function openTab(tab: AppTab) {
+    if (tab === "settings") setSettingsView("settings");
     const target: Route =
       tab === "home" ? { name: "home" } :
       tab === "lists" ? { name: "lists" } :
       tab === "history" ? { name: "history" } :
       { name: "settings" };
     navigate(target);
+  }
+
+  function requestStoreDelete(storeId: string) {
+    const store = app.stores.find((entry) => entry.id === storeId);
+    if (!store) return;
+    setStoresOpen(false);
+    setStoreToDelete(store);
+  }
+
+  function cancelStoreDelete() {
+    setStoreToDelete(null);
+    setStoresOpen(true);
+  }
+
+  function confirmStoreDelete() {
+    if (!storeToDelete) return;
+    app.deleteStore(storeToDelete.id);
+    setStoreToDelete(null);
+    setStoresOpen(true);
+    app.showNotice("Store removed. Its lists and receipts are kept.");
   }
 
   function submitListDialog(name: string, storeId: string | null) {
@@ -190,7 +215,13 @@ export function App({ storage }: AppProps) {
         <ReceiptDetailPage receipt={selectedReceipt} onBack={() => navigate({ name: "history" })} onDelete={() => setDeleteReceiptId(selectedReceipt.id)} />
       ) : null
     ) : (
-      <SettingsPage currency={app.currency} onCurrencyChange={app.changeCurrency} onClose={() => navigate({ name: "home" })} />
+      <SettingsPage
+        currency={app.currency}
+        view={settingsView}
+        onCurrencyChange={app.changeCurrency}
+        onViewChange={setSettingsView}
+        onClose={() => navigate({ name: "home" })}
+      />
     );
 
   return (
@@ -250,7 +281,7 @@ export function App({ storage }: AppProps) {
         }}
         onRename={app.renameStore}
         onRecolor={app.recolorStore}
-        onDelete={app.deleteStore}
+        onDelete={requestStoreDelete}
       />
 
       <RepeatTripDialog open={repeatOpen} receipts={app.receipts} onClose={() => setRepeatOpen(false)} onPick={pickRepeatReceipt} />
@@ -283,8 +314,25 @@ export function App({ storage }: AppProps) {
         onCancel={() => setDeleteList(null)}
         onConfirm={confirmDeleteList}
       />
+      <DeleteDialog
+        open={storeToDelete !== null}
+        idPrefix="store-"
+        title="Delete this store?"
+        confirmLabel="Delete store"
+        message={storeToDelete ? (() => {
+          const affected = app.lists.filter((list) => list.storeId === storeToDelete.id).length;
+          return affected === 0
+            ? `“${storeToDelete.name}” isn’t assigned to any lists. Receipts will be kept.`
+            : `${affected} ${affected === 1 ? "list will" : "lists will"} move to No store. Receipts will be kept.`;
+        })() : ""}
+        onCancel={cancelStoreDelete}
+        onConfirm={confirmStoreDelete}
+      />
 
-      <NoticeBanner message={app.notice} onDismiss={app.dismissNotice} />
+      <NoticeBanner
+        message={app.storageIssue ?? app.notice}
+        onDismiss={app.storageIssue ? app.dismissStorageIssue : app.dismissNotice}
+      />
       <UndoBanner undo={app.undo} onUndo={app.undoDelete} />
     </>
   );

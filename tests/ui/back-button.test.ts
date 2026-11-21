@@ -133,7 +133,7 @@ describe("Back button in the app", () => {
 
     click("#open-about");
     expect(q("#settings-title").textContent).toBe("About");
-    click("#close-settings");
+    pressBack();
     expect(q("#settings-title").textContent).toBe("Settings");
 
     pressBack();

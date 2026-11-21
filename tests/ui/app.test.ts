@@ -228,6 +228,8 @@ describe("Lists", () => {
     expect(saved().stores.find((entry) => entry.id === store.id)?.name).toBe("Corner store");
 
     click(`#store-delete-${store.id}`);
+    expect(q<HTMLDialogElement>("#store-confirm-delete-dialog").open).toBe(true);
+    click("#store-confirm-delete");
     expect(saved().stores.map((entry) => entry.id)).not.toContain(store.id);
   });
 });

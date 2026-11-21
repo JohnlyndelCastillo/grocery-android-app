@@ -15,6 +15,7 @@ export function parentView(view: SettingsView): SettingsView {
 }
 
 export interface UndoAction {
+  listId: string;
   items: Item[];
   message: string;
 }

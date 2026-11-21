@@ -57,6 +57,7 @@ export function useGroceryList(storage: GroceryStorage, selectedListId: string |
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [storageIssue, setStorageIssue] = useState<string | null>(() => storage.getLoadNotice?.() ?? null);
   // Committing several changes in one event must build on the previous change, not the last render.
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -116,7 +117,8 @@ export function useGroceryList(storage: GroceryStorage, selectedListId: string |
   }
 
   function deleteWithUndo(ids: Set<string>, message: string): void {
-    setUndo({ items: items.filter((item) => ids.has(item.id)), message });
+    if (!activeList) return;
+    setUndo({ listId: activeList.id, items: items.filter((item) => ids.has(item.id)), message });
     commitItems(removeItems(items, ids));
   }
 
@@ -178,6 +180,7 @@ export function useGroceryList(storage: GroceryStorage, selectedListId: string |
     pendingDelete,
     undo,
     notice,
+    storageIssue,
 
     // items
     addItem: (name: string) => commitItems(addItem(items, name)),
@@ -217,6 +220,7 @@ export function useGroceryList(storage: GroceryStorage, selectedListId: string |
       commitState((current) => ({ ...current, receipts: removeReceipt(current.receipts, id) }));
     },
     dismissNotice: () => setNotice(null),
+    dismissStorageIssue: () => setStorageIssue(null),
     showNotice: (message: string) => setNotice(message),
 
     // tabs + selection
@@ -252,7 +256,15 @@ export function useGroceryList(storage: GroceryStorage, selectedListId: string |
     },
     undoDelete(): void {
       if (!undo) return;
-      commitItems([...items, ...undo.items]);
+      const sourceList = findList(stateRef.current.lists, undo.listId);
+      if (!sourceList) {
+        setNotice("The original list is no longer available.");
+        setUndo(null);
+        return;
+      }
+      const existingIds = new Set(sourceList.items.map((item) => item.id));
+      const restoredItems = [...sourceList.items, ...undo.items.filter((item) => !existingIds.has(item.id))];
+      commitState((current) => updateListItems(current, undo.listId, restoredItems));
       setUndo(null);
     },
 

@@ -1,30 +1,29 @@
-import { useState } from "react";
 import { version } from "../../../package.json";
 import type { CurrencyCode } from "../../domain/types";
 import { ChevronIcon, SettingsGroup, SettingsRow } from "./SettingsGroup";
 
+export type SettingsPageView = "settings" | "currency" | "about";
+
 interface SettingsPageProps {
   currency: CurrencyCode;
+  view: SettingsPageView;
   onCurrencyChange(currency: CurrencyCode): void;
+  onViewChange(view: SettingsPageView): void;
   onClose(): void;
 }
 
-type SettingsView = "settings" | "currency" | "about";
-
 const releaseUrl = `https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`;
-const titles: Record<SettingsView, string> = { settings: "Settings", currency: "Currency", about: "About" };
+const titles: Record<SettingsPageView, string> = { settings: "Settings", currency: "Currency", about: "About" };
 const currencyOptions: { code: CurrencyCode; label: string }[] = [
   { code: "PHP", label: "Philippine peso (PHP)" },
   { code: "VND", label: "Vietnamese đồng (VND)" },
   { code: "USD", label: "US dollar (USD)" },
 ];
 
-export function SettingsPage({ currency, onCurrencyChange, onClose }: SettingsPageProps) {
-  const [view, setView] = useState<SettingsView>("settings");
-
+export function SettingsPage({ currency, view, onCurrencyChange, onViewChange, onClose }: SettingsPageProps) {
   function handleBack() {
     if (view === "settings") onClose();
-    else setView("settings");
+    else onViewChange("settings");
   }
 
   return (
@@ -41,14 +40,14 @@ export function SettingsPage({ currency, onCurrencyChange, onClose }: SettingsPa
       <main id="screen-scroll" className="page-scroll min-h-0 flex-1">
         <div id="settings-home" className="pt-2" hidden={view !== "settings"}>
           <SettingsGroup>
-            <SettingsRow id="open-currency" onClick={() => setView("currency")}>
+            <SettingsRow id="open-currency" onClick={() => onViewChange("currency")}>
               <span>Currency</span>
               <span className="flex items-center gap-2">
                 <span id="currency-value" className="text-body text-muted">{currency}</span>
                 <ChevronIcon />
               </span>
             </SettingsRow>
-            <SettingsRow id="open-about" onClick={() => setView("about")}>
+            <SettingsRow id="open-about" onClick={() => onViewChange("about")}>
               <span>About</span><ChevronIcon />
             </SettingsRow>
           </SettingsGroup>

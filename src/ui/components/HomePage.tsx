@@ -17,7 +17,7 @@ export function HomePage({ app, onOpenBudget, onOpenList, onOpenHistory, onOpenR
   const status = app.budgetStatus;
   const spent = app.spentToday;
   const over = status.state === "over";
-  const percent = budget === null || budget <= 0 ? 0 : Math.min(100, Math.round((spent.amount / budget) * 100));
+  const percent = budget === null ? 0 : budget === 0 ? (spent.amount > 0 ? 100 : 0) : Math.min(100, Math.round((spent.amount / budget) * 100));
   const list = continueList(app.state);
   const summary = list ? listSummary(list) : null;
   const recent = recentReceipts(app.state, 3);

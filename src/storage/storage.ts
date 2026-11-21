@@ -8,6 +8,8 @@ import { isCurrency } from "./currency";
 export interface GroceryStorage {
   loadState(): AppStateV2;
   saveState(state: AppStateV2): void;
+  /** A persistent warning produced while loading or recovering saved state. */
+  getLoadNotice?(): string | null;
   loadDailyBudget(): number | null;
   saveDailyBudget(amount: number | null): void;
 }
@@ -94,8 +96,43 @@ export function isAppStateV2(value: unknown): value is AppStateV2 {
 }
 
 function normalizeState(state: AppStateV2): AppStateV2 {
-  const activeListId = state.lists.some((list) => list.id === state.activeListId) ? state.activeListId : state.lists[0]?.id ?? null;
-  return { ...state, activeListId };
+  const live = state.lists.filter((list) => list.archivedAt === null);
+  const activeListId = live.some((list) => list.id === state.activeListId)
+    ? state.activeListId
+    : [...live].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]?.id ?? null;
+  return { ...state, activeListId, receipts: addMissingReceiptBudgetSnapshots(state.receipts) };
+}
+
+/**
+ * Older receipt records did not save the remaining daily budget. If several trips
+ * share a day and currency, reconstruct each snapshot from the receipts up to that trip.
+ * A single receipt can keep using the UI's existing, exact budget-minus-total fallback.
+ */
+function addMissingReceiptBudgetSnapshots(receipts: Receipt[]): Receipt[] {
+  const groups = new Map<string, Receipt[]>();
+  for (const receipt of receipts) {
+    const date = new Date(receipt.finishedAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = `${localDateKey(date)}:${receipt.currency}`;
+    const group = groups.get(key) ?? [];
+    group.push(receipt);
+    groups.set(key, group);
+  }
+
+  const updated = new Map<string, Receipt>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    let cumulative = 0;
+    for (const receipt of [...group].sort((a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime())) {
+      cumulative = Math.round((cumulative + receipt.total) * 100) / 100;
+      if (receipt.remainingBudgetAtTime !== undefined && !(receipt.remainingBudgetAtTime === null && receipt.budget !== null)) continue;
+      updated.set(receipt.id, {
+        ...receipt,
+        remainingBudgetAtTime: receipt.budget === null ? null : Math.round((receipt.budget - cumulative) * 100) / 100,
+      });
+    }
+  }
+  return receipts.map((receipt) => updated.get(receipt.id) ?? receipt);
 }
 
 /** Reads a legacy array key. `missing` means the key was never written; `invalid` means it cannot be trusted. */
@@ -149,6 +186,10 @@ export function createLocalStorageAdapter(
   today: () => string = localDateKey,
   now: () => Date = () => new Date(),
 ): GroceryStorage {
+  let loadNotice: string | null = null;
+  let refuseStateWrites = false;
+  let backedUpInvalidRaw: string | null = null;
+
   function writeState(state: AppStateV2): boolean {
     try {
       store.setItem(APP_STATE_KEY, JSON.stringify(state));
@@ -160,29 +201,55 @@ export function createLocalStorageAdapter(
 
   return {
     loadState() {
+      let raw: string | null;
       try {
-        const raw = store.getItem(APP_STATE_KEY);
-        if (raw) {
+        raw = store.getItem(APP_STATE_KEY);
+      } catch {
+        loadNotice = "Saved data could not be read. Changes in this session may not be saved.";
+        refuseStateWrites = true;
+        return emptyState();
+      }
+
+      if (raw !== null) {
+        try {
+          const parsed: unknown = JSON.parse(raw);
+          if (isAppStateV2(parsed)) return normalizeState(parsed);
+        } catch {
+          // Preserve unreadable bytes below before attempting legacy recovery.
+        }
+
+        if (backedUpInvalidRaw !== raw) {
+          const recoveryKey = `${APP_STATE_KEY}-recovery-${now().getTime()}-${Math.random().toString(36).slice(2)}`;
           try {
-            const parsed: unknown = JSON.parse(raw);
-            if (isAppStateV2(parsed)) return normalizeState(parsed);
+            store.setItem(recoveryKey, raw);
+            backedUpInvalidRaw = raw;
           } catch {
-            // Invalid JSON: fall through to a fresh migration from the untouched legacy keys.
+            loadNotice = "Saved data was unreadable and could not be backed up. Changes in this session may not be saved.";
+            refuseStateWrites = true;
+            return emptyState();
           }
         }
-      } catch {
-        // Storage is unavailable. Fall through; migration below will also fail safely.
+        loadNotice = "Saved data was unreadable. A recovery copy was kept; the older list and receipts were restored where available.";
       }
 
       const migrated = migrateLegacyState(store, now());
-      if (!migrated) return emptyState();
+      if (!migrated) {
+        loadNotice = raw === null
+          ? "Older saved data could not be read. The original records were left unchanged."
+          : "Saved data was unreadable and backed up, but the older recovery records could not be read. The originals were left unchanged.";
+        return emptyState();
+      }
+      const recovered = normalizeState(migrated);
       // Only a successful write means migration is complete. The legacy keys stay as a recovery copy.
-      writeState(migrated);
-      return migrated;
+      writeState(recovered);
+      return recovered;
     },
     saveState(state) {
       // A failed write keeps the app usable for this session; the previous state stays on disk.
-      writeState(state);
+      if (!refuseStateWrites) writeState(state);
+    },
+    getLoadNotice() {
+      return loadNotice;
     },
     loadDailyBudget() {
       try {
