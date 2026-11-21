@@ -527,7 +527,7 @@ body { min-width: 320px; background: var(--color-app); }
   background: var(--color-track);
 }
 
-.detail-bottom { flex: 0 0 auto; padding-top: 8px; }
+.detail-bottom { flex: 0 0 auto; padding: 8px 0 12px; }
 .finish-trip {
   display: block;
   width: 100%;
@@ -584,8 +584,8 @@ input.add-input {
 .item-list .name { padding: 12px 0; font-size: .9375rem; font-weight: 500; }
 .item-subtotal { padding-top: 2px; }
 .item-details-row {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) 48px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: end;
 }
@@ -768,7 +768,7 @@ input.invalid { border-color: var(--color-danger) !important; }
   .page-scroll { padding-left: 0; padding-right: 0; }
   .summary-card { padding: 11px; }
   .budget-chip, .remaining-chip { padding-left: 7px; padding-right: 7px; }
-  .item-details-row { grid-template-columns: 124px minmax(0, 1fr) 44px; gap: 4px; }
+  .item-details-row { gap: 4px; }
   .quantity-control { width: 124px; }
   .qty-step { width: 41px; flex-basis: 41px; }
   .quantity-control .qty { width: 42px; }
