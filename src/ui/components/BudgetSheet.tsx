@@ -8,7 +8,8 @@ interface BudgetSheetProps {
   /** The currency code shown inside the field, e.g. "PHP". */
   symbol: string;
   money: Money;
-  cartAmount: number;
+  /** Today's spending: same-currency receipts plus the active list's in-cart total. */
+  spentAmount: number;
   onSave(raw: string): void; // "" clears the budget
   onClose(): void;
 }
@@ -20,7 +21,7 @@ const KEYBOARD_SETTLE_MS = 250;
 // Bottom sheet for today's budget. `open` is the single source of truth, like DeleteDialog.
 // The sheet scrolls (max height is the visible viewport, which shrinks with the keyboard), so Save and Clear
 // stay reachable above the keyboard and at large text sizes instead of being clipped.
-export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, onClose }: BudgetSheetProps) {
+export function BudgetSheet({ open, budget, symbol, money, spentAmount, onSave, onClose }: BudgetSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initial = budget === null ? "" : String(budget);
@@ -45,7 +46,7 @@ export function BudgetSheet({ open, budget, symbol, money, cartAmount, onSave, o
 
   const parsed = parseBudget(draft);
   const invalid = error || !parsed.ok;
-  const status = parsed.ok && parsed.value !== null ? budgetStatus(cartAmount, parsed.value) : null;
+  const status = parsed.ok && parsed.value !== null ? budgetStatus(spentAmount, parsed.value) : null;
   const over = status?.state === "over";
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

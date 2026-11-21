@@ -4,6 +4,7 @@ interface AddItemFormProps {
   onAdd(name: string): void;
 }
 
+// The inset add bar from the approved list-detail design.
 export function AddItemForm({ onAdd }: AddItemFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [invalid, setInvalid] = useState(false);
@@ -22,12 +23,12 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
   }
 
   return (
-    <form id="add-form" className="mb-4 flex flex-wrap gap-2" noValidate onSubmit={handleSubmit}>
+    <form id="add-form" className="add-bar flex" noValidate onSubmit={handleSubmit}>
       <label className="sr-only" htmlFor="new-name">New grocery item</label>
       <input
         id="new-name"
         ref={inputRef}
-        className={`min-w-[11rem] flex-1 bg-transparent ${invalid ? "invalid" : ""}`}
+        className={`add-input ${invalid ? "invalid" : ""}`}
         placeholder="Add an item"
         required
         autoComplete="off"
@@ -36,8 +37,8 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
           if (event.currentTarget.value.trim()) setInvalid(false);
         }}
       />
-      <button className="tap inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-green-fill px-4 font-semibold text-on-action" type="submit">
-        <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
+      <button className="add-button whitespace-nowrap" type="submit">
+        <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
         </svg>
         Add
