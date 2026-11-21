@@ -9,7 +9,6 @@ interface SettingsPageProps {
   view: SettingsPageView;
   onCurrencyChange(currency: CurrencyCode): void;
   onViewChange(view: SettingsPageView): void;
-  onClose(): void;
 }
 
 const releaseUrl = `https://github.com/JohnlyndelCastillo/grocery-android-app/releases#release-v${version}`;
@@ -20,69 +19,87 @@ const currencyOptions: { code: CurrencyCode; label: string }[] = [
   { code: "USD", label: "US dollar (USD)" },
 ];
 
-export function SettingsPage({ currency, view, onCurrencyChange, onViewChange, onClose }: SettingsPageProps) {
+export function SettingsPage({ currency, view, onCurrencyChange, onViewChange }: SettingsPageProps) {
   function handleBack() {
-    if (view === "settings") onClose();
-    else onViewChange("settings");
+    onViewChange("settings");
   }
 
   return (
     <section id="settings-page" className="page settings-page" aria-labelledby="settings-title">
-      <header className="settings-header">
-        <button id="close-settings" className="tap grid shrink-0 place-items-center rounded-xl bg-transparent p-0 text-ink" type="button" aria-label={view === "settings" ? "Back to home" : `Back to Settings`} onClick={handleBack}>
-          <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 id="settings-title" className="m-0 min-w-0 text-title font-medium text-ink">{titles[view]}</h1>
-      </header>
-
-      <main id="screen-scroll" className="page-scroll min-h-0 flex-1">
-        <div id="settings-home" className="pt-2" hidden={view !== "settings"}>
-          <SettingsGroup>
-            <SettingsRow id="open-currency" onClick={() => onViewChange("currency")}>
-              <span>Currency</span>
-              <span className="flex items-center gap-2">
-                <span id="currency-value" className="text-body text-muted">{currency}</span>
-                <ChevronIcon />
-              </span>
-            </SettingsRow>
-            <SettingsRow id="open-about" onClick={() => onViewChange("about")}>
-              <span>About</span><ChevronIcon />
-            </SettingsRow>
-          </SettingsGroup>
-          <p className="mx-4 mt-4 text-label text-muted">Lists, receipts, budget, and currency stay on this device.</p>
-        </div>
-
-        <div id="currency-page" className="pt-2" hidden={view !== "currency"}>
-          <div role="radiogroup" aria-label="Currency">
-            <SettingsGroup>
-              {currencyOptions.map(({ code, label }) => (
-                <SettingsRow key={code} id={`currency-option-${code}`} role="radio" checked={currency === code} onClick={() => onCurrencyChange(code)}>
-                  <span>{label}</span>
-                  {currency === code && (
-                    <svg className="size-5 text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-                  )}
+      {view === "settings" ? (
+        <main key={view} id="screen-scroll" className="settings-panel-transition page-scroll min-h-0 flex-1">
+          <h1 id="settings-title" className="page-heading settings-root-heading">Settings</h1>
+          <div id="settings-home">
+            <section className="settings-section" aria-labelledby="settings-preferences-heading">
+              <h2 id="settings-preferences-heading" className="settings-section-heading">Preferences</h2>
+              <SettingsGroup>
+                <SettingsRow id="open-currency" onClick={() => onViewChange("currency")}>
+                  <span>Currency</span>
+                  <span className="flex items-center gap-2">
+                    <span id="currency-value" className="text-body text-muted">{currency}</span>
+                    <ChevronIcon />
+                  </span>
                 </SettingsRow>
-              ))}
-            </SettingsGroup>
+              </SettingsGroup>
+              <p className="settings-section-note">Used to format totals throughout the app.</p>
+            </section>
+            <section className="settings-section" aria-labelledby="settings-app-heading">
+              <h2 id="settings-app-heading" className="settings-section-heading">App</h2>
+              <SettingsGroup>
+                <SettingsRow id="open-about" onClick={() => onViewChange("about")}>
+                  <span>About</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-label text-muted">v{version}</span>
+                    <ChevronIcon />
+                  </span>
+                </SettingsRow>
+              </SettingsGroup>
+            </section>
           </div>
-          <p id="currency-note" className="mx-4 mt-3 text-label text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
-        </div>
+        </main>
+      ) : (
+        <>
+          <header className="settings-header">
+            <button id="close-settings" className="tap grid shrink-0 place-items-center rounded-xl bg-transparent p-0 text-ink" type="button" aria-label="Back to Settings" onClick={handleBack}>
+              <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 id="settings-title" className="m-0 min-w-0 text-title font-medium text-ink">{titles[view]}</h1>
+          </header>
 
-        <div id="about-page" className="pt-2" hidden={view !== "about"}>
-          <SettingsGroup>
-            <SettingsRow>
-              <span>Version</span>
-              <strong className="num text-body font-semibold text-muted">v{version}</strong>
-            </SettingsRow>
-            <SettingsRow href={releaseUrl}>
-              <span>What’s new</span>
-              <svg className="size-5 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
-            </SettingsRow>
-          </SettingsGroup>
-        </div>
-      </main>
+          <main key={view} id="screen-scroll" className="settings-panel-transition page-scroll min-h-0 flex-1">
+            <div id="currency-page" className="pt-2" hidden={view !== "currency"}>
+              <div role="radiogroup" aria-label="Currency">
+                <SettingsGroup>
+                  {currencyOptions.map(({ code, label }) => (
+                    <SettingsRow key={code} id={`currency-option-${code}`} role="radio" checked={currency === code} onClick={() => onCurrencyChange(code)}>
+                      <span>{label}</span>
+                      {currency === code && (
+                        <svg className="size-5 text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                      )}
+                    </SettingsRow>
+                  ))}
+                </SettingsGroup>
+              </div>
+              <p id="currency-note" className="mx-4 mt-3 text-label text-muted">Changing currency updates formatting only. It doesn’t convert your amounts.</p>
+            </div>
+
+            <div id="about-page" className="pt-2" hidden={view !== "about"}>
+              <SettingsGroup>
+                <SettingsRow>
+                  <span>Version</span>
+                  <strong className="num text-body font-semibold text-muted">v{version}</strong>
+                </SettingsRow>
+                <SettingsRow href={releaseUrl}>
+                  <span>What’s new</span>
+                  <svg className="size-5 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                </SettingsRow>
+              </SettingsGroup>
+            </div>
+          </main>
+        </>
+      )}
     </section>
   );
 }

@@ -220,14 +220,13 @@ export function App({ storage }: AppProps) {
         view={settingsView}
         onCurrencyChange={app.changeCurrency}
         onViewChange={setSettingsView}
-        onClose={() => navigate({ name: "home" })}
       />
     );
 
   return (
     <>
       <div className="app-shell">
-        <div className="min-h-0 flex-1">{screen}</div>
+        <div key={routeKey} className="screen-transition min-h-0 flex-1">{screen}</div>
         <BottomNav active={tabForRoute(route)} onNavigate={openTab} />
       </div>
 

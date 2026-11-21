@@ -2,6 +2,7 @@ import { localMonthKey } from "../../domain/dates";
 import { receiptsByMonth } from "../../domain/selectors";
 import type { GroceryList } from "../hooks/useGroceryList";
 import { formatMonthLabel, formatShortDate, itemCountLabel, makeMoney, tripCountLabel } from "../format";
+import { SearchFilters } from "./SearchFilters";
 
 interface HistoryPageProps {
   app: GroceryList;
@@ -22,8 +23,9 @@ export function HistoryPage({ app, onOpenReceipt, onStartList }: HistoryPageProp
   return (
     <div id="history-page" className="page">
       <main id="screen-scroll" className="page-scroll">
-        <p className="eyebrow">Past shopping trips</p>
         <h1 className="page-heading">History</h1>
+
+        <SearchFilters id="history-search-controls" label="Search history" placeholder="Search receipts" filters={["All trips", "This month", "By store"]} />
 
         {app.receipts.length === 0 ? (
           <section className="card empty-history mt-5" aria-label="No receipts">

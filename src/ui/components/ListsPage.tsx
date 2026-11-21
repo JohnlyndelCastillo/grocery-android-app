@@ -3,6 +3,7 @@ import { listSummary } from "../../domain/selectors";
 import type { ShoppingList } from "../../domain/types";
 import type { GroceryList } from "../hooks/useGroceryList";
 import { itemCountLabel, lastShoppedLabel } from "../format";
+import { SearchFilters } from "./SearchFilters";
 
 interface ListsPageProps {
   app: GroceryList;
@@ -20,7 +21,7 @@ export function ListsPage({ app, onOpenList, onNewList, onManageStores, onOpenLi
   return (
     <div id="lists-page" className="page lists-page">
       <main id="screen-scroll" className="page-scroll flex flex-col">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="lists-heading-row flex items-center justify-between gap-3">
           <h1 className="page-heading">Lists</h1>
           <button id="open-store-manager" className="icon-button" type="button" aria-label="Manage stores" onClick={onManageStores}>
             <svg className="size-[1.125rem]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -28,6 +29,8 @@ export function ListsPage({ app, onOpenList, onNewList, onManageStores, onOpenLi
             </svg>
           </button>
         </div>
+
+        <SearchFilters id="lists-search-controls" label="Search lists" placeholder="Search lists" filters={["All", "Active", "Archived"]} />
 
         {live.length === 0 ? (
           <p id="lists-empty" className="empty-state">No lists yet. Create one to start planning.</p>

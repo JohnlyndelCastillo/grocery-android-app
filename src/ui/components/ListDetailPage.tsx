@@ -4,6 +4,7 @@ import { lightTap, successTap } from "../haptics";
 import { AddItemForm } from "./AddItemForm";
 import { ShoppingList } from "./ShoppingList";
 import { SummaryCard } from "./SummaryCard";
+import { SearchField } from "./SearchFilters";
 
 interface ListDetailPageProps {
   app: GroceryList;
@@ -36,7 +37,7 @@ export function ListDetailPage({ app, list, storeName, onBack, onOpenBudget, onO
         </button>
       </header>
 
-      <main id="screen-scroll" className="page-scroll min-h-0 flex-1">
+      <main id="screen-scroll" className="detail-page-scroll page-scroll min-h-0 flex-1">
         <SummaryCard
           cartTotal={app.cartText}
           plannedTotal={app.plannedText}
@@ -55,6 +56,10 @@ export function ListDetailPage({ app, list, storeName, onBack, onOpenBudget, onO
             <span id="progress-label" className="sr-only">Shopping progress</span>
             <i className="block" style={{ width: `${progress * 100}%` }} />
           </span>
+        </div>
+
+        <div className="item-search-row">
+          <SearchField id="search-list-items" label="Search items" placeholder="Search items" />
         </div>
 
         <div className="segments" role="tablist" aria-label="Items by shopping status">

@@ -8,6 +8,34 @@ This is an implementation handoff for the local coding agent. It describes the i
 
 The visual reference is the local mockup at `/home/ayaneruu/.codex/visualizations/2026/11/21/01a1fe5f-9cda-70b2-ac58-a5c40d062e68/grocery-phase3-pages.html`. If it is unavailable, follow the visual details in this document and preserve the current app's system light/dark behavior.
 
+## Current design screenshots
+
+These screenshots show the implemented app at a 390 × 844 mobile viewport with sample grocery data. Search and filter controls are included as visual UI; their filtering behavior is not wired yet.
+
+### Home
+
+![Home screen](images/grocery-v3-home.png)
+
+### Lists
+
+![Lists screen](images/grocery-v3-lists.png)
+
+### List detail
+
+![List detail screen](images/grocery-v3-list-detail.png)
+
+### History
+
+![History screen](images/grocery-v3-history.png)
+
+### Receipt detail
+
+![Receipt detail screen](images/grocery-v3-receipt-detail.png)
+
+### Settings
+
+![Settings screen](images/grocery-v3-settings.png)
+
 ## Visual fidelity requirements
 
 Treat the mockup as the target design, not just inspiration. The repository app is rendered with React and CSS inside the Capacitor WebView, so the screen layout, typography, colors, cards, and frosted bottom bar can be reproduced in the app. Match the mockup closely before adding optional polish or changing layout decisions.
@@ -31,7 +59,7 @@ Treat the mockup as the target design, not just inspiration. The repository app 
 
 ### Design acceptance check
 
-Before calling the design stage done, capture the four screens at a 390 × 844 CSS-pixel mobile viewport and compare them directly with the reference mockup. Check the content order, relative card sizes, whitespace, type scale, colors, corner radii, and bottom-bar position. Iterate on visible mismatches instead of accepting a generic approximation. Then check 360 px width, dark mode, largest text scale, and safe-area insets for clipping or overlap. Wire the real actions and data after the static layout is visually aligned.
+Before calling the design stage done, capture Home, Lists, list detail, History, receipt detail, and Settings at a 390 × 844 CSS-pixel mobile viewport and compare them directly with the reference mockup. Check the content order, relative card sizes, whitespace, type scale, colors, corner radii, and bottom-bar position. Iterate on visible mismatches instead of accepting a generic approximation. Then check 360 px width, dark mode, largest text scale, and safe-area insets for clipping or overlap. Wire the real actions and data after the static layout is visually aligned.
 
 ## Repository facts to use
 
@@ -56,7 +84,7 @@ The older Phase 3 stages document assumes IndexedDB and includes search, item me
 
 ## Out of scope for this pass
 
-- Search, sorting, filters, categories, bulk moving items, and item memory.
+- Search and filter behavior, sorting, categories, bulk moving items, and item memory. Search and filter controls may be shown as visual placeholders.
 - Cloud sync, accounts, sharing between users, and backend services.
 - Replacing localStorage with IndexedDB or changing the Android persistence layer.
 - Reworking the existing item editor or receipt calculations beyond what is needed to support multiple lists and an accurate daily budget on Home.

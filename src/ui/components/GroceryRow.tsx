@@ -21,13 +21,10 @@ interface GroceryRowProps {
 }
 
 const label = "mb-1 block text-label text-muted";
-const step = "qty-step tap grid h-[48px] w-[48px] shrink-0 place-items-center rounded-none bg-transparent p-0 text-[1.375rem] font-medium text-ink touch-manipulation";
+const step = "qty-step grid h-[48px] shrink-0 place-items-center rounded-none bg-transparent p-0 text-[1.375rem] font-medium text-ink touch-manipulation";
 
-// One row inside the list card. Three parts, none shorter than 48dp:
-//  1. checkbox + name (wraps) + "Line total",
-//  2. labeled editors: Quantity (three 48dp areas) and Unit price,
-//  3. remove, in its own 48dp area.
-// The editors wrap, so at 320dp or large text they stack instead of squeezing.
+// Keep the item name and total together, then fit both editors and the 48dp remove target on one row.
+// The editor row can still wrap at very narrow widths or increased browser zoom.
 export function GroceryRow({ item, money, pricePlaceholder, selecting, selected, swiped, onSwipe, onChecked, onSelected, onQty, onPrice, onQuickDelete, onSwipeDelete }: GroceryRowProps) {
   const rowRef = useRef<HTMLLIElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
@@ -63,7 +60,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
         aria-label={`Delete ${item.name}`}
         onClick={() => onSwipeDelete(item.id, item.name)}
       >Delete</button>
-      <div className="swipe-content relative z-[1] w-full bg-[var(--color-surface)] px-4 pb-4 pt-1 transition-transform duration-200 group-data-[swiped=true]:-translate-x-[76px]">
+      <div className="swipe-content relative z-[1] bg-[var(--color-surface)] px-4 pb-4 pt-1 transition-transform duration-200 group-data-[swiped=true]:-translate-x-[76px]">
         <div className="item-title-row -ml-2 flex min-w-0 items-start">
           <label className="tap grid shrink-0 place-items-center" hidden={!selecting}>
             <input
@@ -96,7 +93,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
           <div className="min-w-0">
             <span className={label} aria-hidden="true">Quantity</span>
 
-            <div className="quantity-control flex h-[48px] w-[144px] overflow-hidden rounded-xl bg-[var(--color-quantity-surface)]">
+            <div className="quantity-control flex h-[48px] w-[124px] overflow-hidden rounded-xl bg-[var(--color-quantity-surface)]">
               <button
                 className={step}
                 type="button"
@@ -106,7 +103,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
 
               <input
                 ref={quantityRef}
-                className="qty num tap w-[48px] shrink-0 text-center"
+                className="qty num w-[36px] shrink-0 text-center"
                 type="number"
                 inputMode="numeric"
                 min="0"
@@ -129,9 +126,9 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
           </div>
 
           {/* Unit price */}
-          <div className="min-w-[128px] flex-1">
+          <div className="unit-price-control min-w-[92px] flex-1">
             <span className={label} aria-hidden="true">
-              Unit price · {pricePlaceholder}
+              Price · {pricePlaceholder}
             </span>
 
             <input
@@ -142,8 +139,8 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
               step="0.01"
               defaultValue={item.price || ""}
               placeholder={pricePlaceholder}
-              title="Price per unit"
-              aria-label={`Price per unit for ${item.name}`}
+              title={`Price per unit in ${pricePlaceholder}`}
+              aria-label={`Price per unit for ${item.name} in ${pricePlaceholder}`}
               onInput={(event) =>
                 onPrice(item.id, Number(event.currentTarget.value) || 0)
               }
@@ -169,7 +166,7 @@ export function GroceryRow({ item, money, pricePlaceholder, selecting, selected,
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
-</div>
+        </div>
       </div>
     </li>
   );
